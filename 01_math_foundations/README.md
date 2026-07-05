@@ -17,6 +17,7 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 ## 第一部分內容（已完成）
 
 - **理論筆記**：[`notes.md`](notes.md) — 最小作用量原理、Euler–Lagrange、雙擺完整推導、
+  Coriolis 矩陣與 $\dot M-2C$ 反對稱性、**關節力矩→肌肉力（力臂、冗餘、雙關節肌）**、
   機械手臂型式與正/逆向動力學、數值穩定性、混沌、真實肢段參數。
 - **Notebook**：[`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb)
   — 用 SymPy 從零符號推導、`solve_ivp` 積分、能量守恆驗證、積分器比較、相圖、混沌、

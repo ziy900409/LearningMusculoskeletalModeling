@@ -160,11 +160,99 @@ $$
 - **$C(q,\dot q)\dot q$ Coriolis／向心項**：與速度平方成正比的慣性效應。
 - **$g(q)$ 重力項**：靜態姿勢下肌肉必須抵抗的力矩，逆向動力學裡常單獨分離出「重力貢獻 vs 肌肉貢獻」。
 - **$\tau$ 廣義力**：$\tau_i = \sum_{\text{muscle }j} r_{ij}(q)\,F^M_j$，其中 $r_{ij}$ 為肌肉 $j$
-  對關節 $i$ 的**力臂 (moment arm)**（Zatsiorsky 2012, Ch. 5）。**雙關節肌**（Ch. 6）同時貢獻 $\tau_1$ 與 $\tau_2$。
+  對關節 $i$ 的**力臂 (moment arm)**（Zatsiorsky 2012, Ch. 5）。**雙關節肌**（Ch. 6）同時貢獻 $\tau_1$ 與 $\tau_2$（詳見 §4）。
+
+### 3.5 Coriolis 矩陣與 $\dot M - 2C$ 反對稱性（第二個正確性檢驗）
+
+§3.3 只寫了向量 $C(q,\dot q)\dot q$；但 $C$ **矩陣**本身值得單獨定義——它給我們一個**與能量守恆互補、純代數且逐點成立的正確性檢驗**。用第一類 Christoffel 符號建構：
+
+$$
+C_{ij}(q,\dot q) = \sum_{k}\tfrac12\!\left(\frac{\partial M_{ij}}{\partial q_k}
+      + \frac{\partial M_{ik}}{\partial q_j} - \frac{\partial M_{jk}}{\partial q_i}\right)\dot q_k .
+$$
+
+這樣選出的 $C$ 有兩個關鍵性質：它滿足 $C(q,\dot q)\dot q$ 恰為 §3.3 的速度相關項向量，且
+
+$$
+\boxed{\;\dot M(q) - 2\,C(q,\dot q)\ \text{為反對稱}\;}\qquad\Longleftrightarrow\qquad \dot M = C + C^\top .
+$$
+
+**為何這是「能量守恆的代數根源」**：對被動系統的動能 $T=\tfrac12\dot q^\top M\dot q$ 取時間導數，代入運動方程 $M\ddot q = \tau - C\dot q - g$（並用 $g=\partial V/\partial q$）：
+
+$$
+\frac{dE}{dt} = \dot q^\top\tau
+      + \underbrace{\tfrac12\,\dot q^\top(\dot M - 2C)\,\dot q}_{=\,0\ (\text{反對稱二次型})} = \dot q^\top\tau .
+$$
+
+於是 $\tau=0$ 時 $\dot E=0$——這正是 §6.2 能量守恆檢驗背後的**定理**，而非數值巧合。
+
+> **生物力學／控制意涵**：此性質即**被動性 (passivity)**，是 Stage 7 CMC 等控制器穩定性的基石。
+> 實作上 `dynamics_utils.py` 的 `coriolis_matrix()` 以符號 Christoffel 建構，`tests/` 逐點驗證 $\dot M-2C$ 反對稱。
+> 它是比能量守恆**更強、且與積分器無關**的檢驗（混沌下能量守恆只是必要條件）。
 
 ---
 
-## 4. 從機械手臂型式到動力學管線
+## 4. 從關節力矩到肌肉力：力臂、冗餘與雙關節肌
+
+§1–§3 把運動一路整理到廣義力 $\tau$。但在肌肉骨骼系統裡 $\tau$ **並不是輸入**——它是肌肉群透過力臂
+**合成**出來的結果。這一節把 $\tau$ 打開，是 Stage 6（肌肉冗餘、靜態最佳化）的直接起點。
+
+### 4.1 力臂的虛功／肌腱位移定義
+
+設肌肉 $j$ 的肌腱-肌肉路徑長為 $\ell_j(q)$。由**虛功原理**，肌力 $F^M_j$ 沿肌腱做的虛功，
+等於它在各關節產生的廣義力所做的虛功：
+
+$$
+F^M_j\,\delta\ell_j = \sum_i \tau_{ij}\,\delta q_i,\qquad
+\delta\ell_j = \sum_i \frac{\partial\ell_j}{\partial q_i}\,\delta q_i .
+$$
+
+比較 $\delta q_i$ 的係數，得到力臂的定義——**它就是肌腱長對關節角的偏導**：
+
+$$
+\boxed{\; r_{ij}(q) \equiv \frac{\partial \ell_j(q)}{\partial q_i}\;},\qquad
+\tau_i = \sum_j r_{ij}(q)\,F^M_j .
+$$
+
+這正是 OpenSim 計算 moment arm 的方式（tendon-excursion／partial-velocity 法，An et al. 1984），
+也回答了 §3.4 中 $r_{ij}$「從哪裡來」。力臂**隨 $q$ 改變**：同一條肌肉在不同關節角下效能不同，
+這是肌肉骨骼幾何的核心，也是肌力訓練「角度專一性」的力學根據。
+
+### 4.2 $\tau = R(q)\,F$ 與肌肉冗餘
+
+把所有肌肉的力臂排成矩陣 $R(q)=[\,r_{ij}\,]$（$n_{\text{dof}}\times n_{\text{musc}}$），關節力矩與肌力的關係就是
+
+$$
+\boxed{\;\tau = R(q)\,F\;},\qquad F \ge 0\ \ (\text{肌肉只能拉、不能推}) .
+$$
+
+因為肌肉數遠多於自由度（$n_{\text{musc}} \gg n_{\text{dof}}$），$R$ 是「胖」矩陣，給定 $\tau$ 的 $F$ 有**無窮多組解**
+——這就是**肌肉冗餘 (muscle redundancy)**。中樞神經如何選一組？Stage 6 用最佳化（如 $\min\sum_j a_j^2$）挑出唯一解。
+
+> **最小可算例子（單自由度肘關節、兩條肌）**：屈肌力臂 $+r_f$、伸肌力臂 $-r_e$，則
+> $$\tau = r_f F_f - r_e F_e .$$
+> 要產生同一個 $\tau>0$，有無窮多組 $(F_f,F_e)\ge 0$（含**共同收縮 co-contraction**：兩肌同時出力以提高關節剛度）。
+> 這個 $1\times2$ 的 $R=[\,r_f,\ -r_e\,]$ 就是冗餘的最小體現。
+
+### 4.3 雙關節肌：兩種不同來源的耦合
+
+到這裡，$\tau$ 的「耦合」其實有**兩個獨立來源**，務必分清：
+
+- **被動慣性耦合** $M_{12}$（§3.3）：純粹來自質量分布。動一個關節會**慣性帶動**另一個，與肌肉無關
+  （Zatsiorsky 的 interaction torque；快速投擲、踢擊中遠端關節的角加速度大多來自近端「甩動」，
+  即 induced acceleration，Zajac & Gordon 1989）。
+- **主動幾何耦合**（雙關節肌）：一條肌肉**跨越兩個關節**，使 $R$ 的同一行出現兩個非零元。
+  經典例子是股直肌（rectus femoris），同時**屈髖 + 伸膝**：
+  $$\Delta\tau_{\text{hip}} = r_{\text{hip}}(q)\,F_{RF},\qquad \Delta\tau_{\text{knee}} = r_{\text{knee}}(q)\,F_{RF}.$$
+  一次收縮同時改變兩個關節力矩；兩力臂比值還決定它在關節間**傳遞功率**的方向——
+  這是垂直跳、衝刺爆發力的關鍵機制（van Ingen Schenau 1989；Bobbert）。
+
+**一句話總結**：$\tau$ 的耦合來自**被動的 $M(q)$**（慣性，本 Stage 建立）與**主動的 $R(q)$**（肌肉幾何，Stage 4–6 補上）。
+看懂這兩者的分工，就接上了整個肌肉骨骼建模的主幹。
+
+---
+
+## 5. 從機械手臂型式到動力學管線
 
 $$
 \underbrace{M(q)\ddot q + C(q,\dot q)\dot q + g(q)}_{\text{慣性 + 速度 + 重力}} = \tau .
@@ -180,9 +268,9 @@ notebook §7 用一個「正向 → 逆向」一致性回路演示兩者互為�
 
 ---
 
-## 5. 數值積分與穩定性
+## 6. 數值積分與穩定性
 
-### 5.1 狀態空間
+### 6.1 狀態空間
 
 令 $x = [q,\ \dot q]^\top$，則
 
@@ -193,7 +281,7 @@ $$
 
 用 `scipy.integrate.solve_ivp` 積分。
 
-### 5.2 能量守恆是最好的驗證
+### 6.2 能量守恆是最好的驗證
 
 被動系統（$\tau=0$、無耗散）總機械能 $E = T + V$ **必守恆**。因此
 
@@ -203,7 +291,7 @@ $$
 
 是一個**與程式無關**的正確性指標。**Stage 1 里程碑：10 秒積分，此值 $< 1\%$。**
 
-### 5.3 積分器的教訓（Stage 4 / 8 的前哨）
+### 6.3 積分器的教訓（Stage 4 / 8 的前哨）
 
 notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會**系統性漏能量**
 （軌跡看似合理卻已錯誤累積）。這正是：
@@ -216,7 +304,7 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 
 ---
 
-## 6. 決定性混沌與預測模擬
+## 7. 決定性混沌與預測模擬
 
 雙擺是**決定性混沌**的教科書範例：初始角相差 $10^{-3}$ 度，數秒後軌跡完全分岔
 （notebook §5 顯示分離量呈指數成長）。
@@ -232,7 +320,7 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 
 ---
 
-## 7. 從玩具擺到真實肢段
+## 8. 從玩具擺到真實肢段
 
 把點質量換成**真實肢段**：以 Winter / Zatsiorsky 式人體測量比例
 （肢段質量佔比、質心位置、迴轉半徑）建立**大腿 + 小腿**模型（`src/dynamics_utils.py` 的
@@ -244,7 +332,7 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 
 ---
 
-## 8. 名詞對照 (Glossary)
+## 9. 名詞對照 (Glossary)
 
 | 中文 | English | 符號 |
 |---|---|---|
@@ -256,17 +344,25 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 | 質量（慣性）矩陣 | mass / inertia matrix | $M(q)$ |
 | 慣性耦合 / 交互力矩 | inertial coupling / interaction torque | $M_{12}$ |
 | 科氏／向心項 | Coriolis / centripetal term | $C(q,\dot q)\dot q$ |
+| 科氏矩陣（Christoffel 形式） | Coriolis matrix | $C(q,\dot q)$ |
+| 被動性 / 反對稱性 | passivity / skew-symmetry | $\dot M-2C$ |
 | 力臂 | moment arm | $r_{ij}(q)$ |
+| 力臂矩陣 | moment-arm matrix | $R(q)$ |
+| 肌肉冗餘 | muscle redundancy | $\tau=R(q)F$ |
+| 雙關節肌 | bi-articular muscle | — |
 | 正向 / 逆向動力學 | forward / inverse dynamics | — |
 | 數值剛性 | numerical stiffness | — |
 
 ---
 
-## 9. 參考文獻
+## 10. 參考文獻
 
 見 [`refs.bib`](refs.bib)。核心：
 
 - **Zatsiorsky & Prilutsky (2012)** *Biomechanics of Skeletal Muscles*, Ch. 5（muscle forces → joint movements、moment arm、two-link chain）、Ch. 6（two-joint muscles）。
+- **An, Takahashi, Harrigan & Chao (1984)** 以肌腱位移（tendon excursion）定義力臂，*J. Biomech. Eng.* 106:280–282 —— §4.1 的原始出處。
+- **Zajac & Gordon (1989)** 多關節肌肉如何驅動多個關節（induced acceleration），*Exerc. Sport Sci. Rev.* 17:187–230 —— §4.3 交互力矩的嚴謹版。
+- **van Ingen Schenau (1989)** 雙關節肌與關節間功率傳遞，*Hum. Mov. Sci.* 8:301–337 —— §4.3 爆發力機制。
 - **Freivalds (2011)** *Biomechanics of the Upper Limbs*, Ch. 4–5（muscle modeling、upper-limb segment models 與慣性參數）。
 - **Goldstein, Poole & Safko** *Classical Mechanics*, Ch. 1–2（Lagrangian、Hamilton 原理）。
 - **Featherstone (2008)** *Rigid Body Dynamics Algorithms*, Ch. 1–3（空間代數、為 Stage 2 鋪路）。

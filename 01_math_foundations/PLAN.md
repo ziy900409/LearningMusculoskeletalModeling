@@ -28,15 +28,15 @@
 
 目前 `notes.md` 在 §3.4 停在 $\tau_i = \sum_j r_{ij}F^M_j$，但沒說 $r_{ij}$ 從哪來——這一步是整條路徑的樞紐。
 
-- [ ] **A1 · P1 · [folder]** 補「力臂的虛功／肌腱位移定義」。加一段推導
+- [x] **A1 · P1 · [folder]** 補「力臂的虛功／肌腱位移定義」。 ✅ 已完成（notes.md §4.1）。加一段推導
   $$r_{ij}(q) = \frac{\partial \ell_j(q)}{\partial q_i}, \qquad \tau_i = \sum_j \frac{\partial \ell_j}{\partial q_i} F^M_j,$$
   即「力臂 = 肌腱長對關節角的偏導（tendon excursion）」，也是 OpenSim 計算 moment arm 的方式。
   *位置*：`notes.md` §3.4 之後新增小節。
 
-- [ ] **A2 · P1 · [folder]** 點出 $\tau = R(q)\,F$ 的冗餘結構（$R$ 為 $n_{\text{dof}}\times n_{\text{muscle}}$ 的「胖矩陣」→ 解不唯一 → 需最佳化）。
+- [x] **A2 · P1 · [folder]** 點出 $\tau = R(q)\,F$ 的冗餘結構（$R$ 為 $n_{\text{dof}}\times n_{\text{muscle}}$ 的「胖矩陣」→ 解不唯一 → 需最佳化）。 ✅ 已完成（notes.md §4.2，含單自由度肘關節雙肌例）
   給最小可算例子：單自由度肘關節、屈/伸兩條肌，$R=[\,r_{\text{flex}},\,-r_{\text{ext}}\,]$。這替 §0 的 Stage 6 那一列補上因果。
 
-- [ ] **A3 · P1 · [folder]** 雙關節肌講具體：用股直肌（屈髖 + 伸膝）並列兩種耦合——
+- [x] **A3 · P1 · [folder]** 雙關節肌講具體。 ✅ 已完成（notes.md §4.3）：用股直肌（屈髖 + 伸膝）並列兩種耦合——
   慣性耦合 $M_{12}$（被動、來自質量分布）vs. 肌肉學耦合（主動、來自一條肌跨兩關節的力臂）。
   連到 **Zajac & Gordon (1989)** 的 induced-acceleration 與 van Ingen Schenau / Bobbert 的跳躍能量傳遞。
 
@@ -44,7 +44,7 @@
 
 ## B. 嚴謹度與驗證（讓「數學基礎」更完整）
 
-- [ ] **B1 · P1 · [folder]** 定義 $C$ **矩陣**本身（Christoffel 符號），並加入
+- [x] **B1 · P1 · [folder]** 定義 $C$ **矩陣**本身（Christoffel 符號）。 ✅ 已完成（notes.md §3.5 + `coriolis_matrix()` + 2 條測試），並加入
   $$\dot M(q) - 2C(q,\dot q)\ \text{為反對稱}$$
   作為**第二個純符號、與積分無關的正確性指標**（混沌下能量守恆只是必要條件）。此性質 Stage 7 CMC/被動性控制會直接用到。
   *位置*：`notes.md` §3；`dynamics_utils.py` 可加 `coriolis_matrix()` 與對應檢查。
@@ -52,7 +52,7 @@
 - [ ] **B2 · P2 · [folder]** 加非保守耗散（Rayleigh 耗散函數）$\mathcal F=\tfrac12\sum b_i\dot q_i^2$、$Q_i=-\partial\mathcal F/\partial\dot q_i$，
   演示「加阻尼後能量**單調遞減**」當作另一個驗證，並連結關節/肌肉阻尼。
 
-- [ ] **B3 · P2 · [folder]** 深化 §5.3 積分器教訓：點出**非辛（non-symplectic）積分器有 secular energy drift，與階數無關**；
+- [ ] **B3 · P2 · [folder]** 深化 §6.3 積分器教訓：點出**非辛（non-symplectic）積分器有 secular energy drift，與階數無關**；
   辛/變分積分器即使二階也能讓能量在有界帶內振盪。結論：「積分器的**結構**比**階數**更根本。」
 
 ---
@@ -105,11 +105,11 @@
   搬到每個 README 最上方，第一屏就讓讀者知道「這站要幹嘛、通過標準是什麼」。
 
 - [ ] **D6 · P2 · [folder]** 圖直接內嵌進 `notes.md`。`figures/` 有 6 張已產生的圖，但敘述只寫「見 notebook §3、§5」。
-  把對應 PNG 內嵌到相關段落（能量守恆圖 → §5.2、混沌分岔圖 → §6…），不跑程式的讀者也能看到結論。
+  把對應 PNG 內嵌到相關段落（能量守恆圖 → §6.2、混沌分岔圖 → §7…），不跑程式的讀者也能看到結論。
 
 - [ ] **D7 · P2 · [repo]** 零安裝入口：`requirements.txt`（見 C5）+ **Binder / Colab 徽章**，讓讀者不必本機安裝就能執行 notebook。
 
-- [ ] **D8 · P2 · [repo]** 專案級術語表：各 `notes.md` §8 已有 glossary，升級成一份 project-level glossary，每詞連回「首次出現的 stage」。
+- [ ] **D8 · P2 · [repo]** 專案級術語表：各 `notes.md` §9 已有 glossary，升級成一份 project-level glossary，每詞連回「首次出現的 stage」。
 
 ---
 
@@ -117,7 +117,7 @@
 
 - [ ] **E1 · P2 · [folder]** `refs.bib` 補經典缺漏：
   **Zajac (1989)** muscle model + induced acceleration、**An et al. (1984)** moment arm via tendon excursion（支撐 A1）、
-  **Hicks et al. (2015, *J Biomech Eng*)** 模擬驗證最佳實務（正是 §5「先驗證再相信結論」的原始出處）。
+  **Hicks et al. (2015, *J Biomech Eng*)** 模擬驗證最佳實務（正是 §6「先驗證再相信結論」的原始出處）。
   已列未引用的 Lynch & Park、Zhang & Fan 標為「延伸閱讀」。
 
 - [ ] **E2 · P2 · [folder]** 練習加「預期數值」self-check 區塊（給定初始條件的 10 秒 `rel_range_pct` 參考值），讓自學者能對答案。
@@ -125,7 +125,7 @@
 
 - [ ] **E3 · P2 · [folder]** 把已執行 notebook 匯出 HTML（`nbconvert --to html`）方便 GitHub 直接檢視；`figures/` 加一行 provenance 說明由哪個 cell 產生。
 
-- [ ] **E4 · P2 · [folder]** 前瞻連結（可選）：在混沌節或 §7 提一句「釘住基座 vs 自由漂浮基座」——
+- [ ] **E4 · P2 · [folder]** 前瞻連結（可選）：在混沌節（§7）或 §8 提一句「釘住基座 vs 自由漂浮基座」——
   飛行期全身**角動量守恆**（空翻、貓翻身）預告 Stage 2 floating-base，讓「為什麼要 floating base」有動機。
 
 ---
