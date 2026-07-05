@@ -1,0 +1,24 @@
+# Table of contents -- https://jupyterbook.org/customize/toc.html
+format: jb-book
+root: intro
+parts:
+  - caption: Stage 1 · 數學基礎 (Math Foundations)
+    chapters:
+      - file: 01_math_foundations/README
+        title: 總覽 · 學習目標與里程碑
+      - file: 01_math_foundations/notes
+        title: 理論筆記 · 拉格朗日動力學與雙擺
+      - file: 01_math_foundations/notebooks/01_lagrangian_double_pendulum
+        title: Notebook · 雙擺符號推導與模擬
+      - file: 01_math_foundations/exercises/exercise_01_triple_pendulum
+        title: 練習 · 三擺里程碑
+  # Stage 3 尚未併入版控。待 `git add 03_kinematics_opensim` 後取消下列註解即可納入書中
+  # （並先處理 E5：把 [@key] 轉為 {cite}）。
+  # - caption: Stage 3 · OpenSim 運動學 (Kinematics)
+  #   chapters:
+  #     - file: 03_kinematics_opensim/README
+  #       title: 總覽 · 角度輸入與慣例映射
+  #     - file: 03_kinematics_opensim/notes
+  #       title: 理論筆記 · OpenSim 運動學基礎與慣例歧義
+  #     - file: 03_kinematics_opensim/exercises/exercises
+  #       title: 練習 · Stage 3 里程碑

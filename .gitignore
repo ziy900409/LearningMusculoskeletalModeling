@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+01_Literature_Notes\Books
+*.pdf
+
+# Jupyter Book build output
+_build/

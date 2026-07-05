@@ -94,15 +94,17 @@
   vs. 新階段式 `01_math_foundations / 03_kinematics_opensim`（`01_Literature_Notes` 與 `01_math_foundations` 都叫「01」卻不同義）。
   選定**階段式為主軸**，舊主題資料夾降為 `resources/`（references、books）或併入各 stage。
 
-- [ ] **D3 · P1 · [repo]** 發布成 **Jupyter Book**（或 MkDocs-Material）網站到 GitHub Pages。
-  原料已齊（`notes.md` + 已執行 notebook + `figures/`），只需 `_toc.yml` + `_config.yml`。
-  得到：左側目錄樹、上一頁/下一頁、渲染 LaTeX、notebook 輸出內嵌、手機可讀。零重寫。
+- [~] **D3 · P1 · [repo]** 發布成 **Jupyter Book** 網站到 GitHub Pages。 🟡 骨架已建（`_config.yml`、`_toc.yml`、
+  `intro.md` landing page、`.github/workflows/book.yml` CI）。**尚待**：`pip install jupyter-book && jupyter-book build .`
+  在本機或 CI 首次建置驗證；repo Settings → Pages → Source 設為 **GitHub Actions**（一次性）。
+  已知待辦：Stage 3 的 `[@key]` 內文引用在 MyST 會**原樣顯示**，需轉為 `` {cite}`key` `` 並加 bibliography 指令才漂亮
+  （見新增的 E5）。此項的完整價值也依賴 step 1 的 D1（根 README）與 D2（統一命名）。
 
-- [ ] **D4 · P1 · [repo]** 正式化「每站模板」（照 GeostatsGuy 固定骨架）。`notes.md` 已接近理想順序，抽成共用模板：
-  標題+一句目標 → **學習目標/里程碑（box 置頂）** → **前置需求** → **動機** → 理論 → 程式 → 驗證 → 練習 → 術語 → 參考 → **上一站/下一站**。
+- [x] **D4 · P1 · [repo]** 正式化「每站模板」（照 GeostatsGuy 固定骨架）。 ✅ 已完成（repo 根目錄 `STAGE_TEMPLATE.md`：
+  定義資料夾結構 + README 骨架（目標/里程碑置頂）+ `notes.md` 章節骨架 + 一致性慣例）。
 
-- [ ] **D5 · P1 · [folder]** 動機與目標「上移」。目前里程碑埋在 [`README.md:46`](README.md) 底部；
-  搬到每個 README 最上方，第一屏就讓讀者知道「這站要幹嘛、通過標準是什麼」。
+- [x] **D5 · P1 · [folder]** 動機與目標「上移」。 ✅ 已完成（Stage 1 `README.md` 頂部新增〈學習目標／里程碑／前置後續〉box）。
+  Stage 3 README 已有「本章定位」置頂 box；其餘各站依 `STAGE_TEMPLATE.md` 比照辦理。
 
 - [ ] **D6 · P2 · [folder]** 圖直接內嵌進 `notes.md`。`figures/` 有 6 張已產生的圖，但敘述只寫「見 notebook §3、§5」。
   把對應 PNG 內嵌到相關段落（能量守恆圖 → §6.2、混沌分岔圖 → §7…），不跑程式的讀者也能看到結論。
@@ -128,6 +130,10 @@
 - [ ] **E4 · P2 · [folder]** 前瞻連結（可選）：在混沌節（§7）或 §8 提一句「釘住基座 vs 自由漂浮基座」——
   飛行期全身**角動量守恆**（空翻、貓翻身）預告 Stage 2 floating-base，讓「為什麼要 floating base」有動機。
 
+- [ ] **E5 · P2 · [repo]** Jupyter Book 引用相容性：Stage 3 `notes.md`/`README.md` 的 pandoc 式 `[@key]` 內文引用
+  在 MyST 不會渲染成引用，需轉為 `` {cite}`key` ``（或 `{cite:t}`）並在頁尾加 `` ```{bibliography} `` 指令、
+  於 `_config.yml` 設 `bibtex_bibfiles`。Stage 1 用散文式引用，無此問題。（D3 的後續打磨。）
+
 ---
 
 ## 建議執行順序（roadmap）
@@ -142,6 +148,6 @@
 
 - [ ] 讀者從 repo 首頁一眼看懂「這是什麼、怎麼走、我在第幾站」。
 - [ ] 每站開頭即見「學習目標 + 通過標準」；結尾有上一站/下一站。
-- [ ] `pytest` 綠燈，涵蓋能量守恆、$M$ 正定、點質量閉式、forward↔inverse 往返。
-- [ ] `notes.md` 能從 $\tau$ 一路講到 $\tau = R(q)F$ 的冗餘，銜接 Stage 6。
+- [x] `pytest` 綠燈，涵蓋能量守恆、$M$ 正定、點質量閉式、forward↔inverse 往返、$\dot M-2C$ 反對稱（13 條）。
+- [x] `notes.md` 能從 $\tau$ 一路講到 $\tau = R(q)F$ 的冗餘，銜接 Stage 6。
 - [ ] `pip install -r requirements.txt` 後可一鍵重現 notebook 與 `figures/`。

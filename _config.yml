@@ -1,0 +1,32 @@
+# Jupyter Book configuration -- https://jupyterbook.org/customize/config.html
+# Build locally with:  pip install jupyter-book && jupyter-book build .
+title: 學習肌肉骨骼建模 · Learning Musculoskeletal Modeling
+author: Hsin Yang
+copyright: "2026"
+only_build_toc_files: true          # only build pages listed in _toc.yml (ignore legacy folders, PLAN.md, ...)
+
+execute:
+  execute_notebooks: "off"          # render committed notebook outputs; notebooks need heavy / OpenSim deps
+
+parse:
+  myst_enable_extensions:
+    - amsmath                        # LaTeX environments
+    - dollarmath                     # $...$ and $$...$$  (matches notes.md)
+    - colon_fence
+    - deflist
+    - linkify
+
+html:
+  use_issues_button: true
+  use_repository_button: true
+  use_edit_page_button: true
+
+repository:
+  url: https://github.com/ziy900409/LearningMusculoskeletalModeling
+  branch: main
+  path_to_book: "."
+
+sphinx:
+  config:
+    language: zh_TW
+    html_show_copyright: true
