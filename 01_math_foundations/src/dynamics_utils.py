@@ -70,6 +70,9 @@ class PlanarChain:
         Generalised coordinates and their first/second time derivatives.
     M_sym, forcing_sym : sympy.Matrix
         Symbolic mass matrix and the combined ``C qd + g`` vector.
+    coriolis_sym : sympy.Matrix
+        Symbolic Coriolis / centripetal matrix ``C(q, qd)`` (Christoffel form),
+        chosen so that ``Mdot - 2C`` is skew-symmetric.
     T_sym, V_sym : sympy.Expr
         Symbolic kinetic and potential energy.
     params : dict
@@ -84,6 +87,7 @@ class PlanarChain:
     M_sym: sp.Matrix
     forcing_sym: sp.Matrix      # C(q, qd) qd + g(q)
     gravity_sym: sp.Matrix      # g(q)
+    coriolis_sym: sp.Matrix     # C(q, qd)  (Christoffel form)
     T_sym: sp.Expr
     V_sym: sp.Expr
     params: dict
@@ -92,6 +96,7 @@ class PlanarChain:
     M: Callable
     forcing: Callable
     gravity: Callable
+    coriolis: Callable
     kinetic_energy: Callable
     potential_energy: Callable
 
@@ -124,6 +129,24 @@ class PlanarChain:
         qd = np.asarray(qd, dtype=float)
         qdd = np.asarray(qdd, dtype=float)
         return self.M(q, qd) @ qdd + self.forcing(q, qd)
+
+    def coriolis_matrix(self, q: np.ndarray, qd: np.ndarray) -> np.ndarray:
+        """Return the Coriolis / centripetal matrix ``C(q, qd)`` (Christoffel form).
+
+        Built from the Christoffel symbols of ``M(q)``, so that
+        ``d/dt M(q) - 2 C(q, qd)`` is **skew-symmetric** (equivalently
+        ``Mdot = C + C.T``).  Two consequences worth checking:
+
+        * ``C(q, qd) @ qd == forcing(q, qd) - gravity(q, qd)`` -- it reproduces the
+          velocity-dependent term of the equations of motion.
+        * The skew-symmetry is the algebraic reason mechanical energy is conserved
+          for the passive chain (see ``notes.md`` Sections 3.5 and 6.2) and the
+          foundation of passivity-based control (Stage 7).  It is a *pointwise*,
+          integrator-independent correctness check, complementary to energy drift.
+        """
+        q = np.asarray(q, dtype=float)
+        qd = np.asarray(qd, dtype=float)
+        return self.coriolis(q, qd)
 
     def state_derivative(self, t: float, y: np.ndarray,
                          tau_fn: Callable | None = None) -> np.ndarray:
@@ -257,6 +280,22 @@ def planar_chain(n: int = 2,
     forcing_sym = sp.simplify(EOM_s.subs({a: 0 for a in qdd_s}))
     gravity_sym = sp.simplify(forcing_sym.subs({v: 0 for v in qd_s}))
 
+    # Coriolis matrix C(q, qd) via Christoffel symbols of the first kind:
+    #   C_ij = sum_k 1/2 ( dM_ij/dq_k + dM_ik/dq_j - dM_jk/dq_i ) qd_k
+    # This particular C makes (Mdot - 2C) skew-symmetric (=> energy conservation,
+    # passivity) and satisfies C(q,qd) qd = forcing - gravity.
+    C_sym = sp.zeros(n, n)
+    for i in range(n):
+        for j in range(n):
+            cij = sp.Integer(0)
+            for k in range(n):
+                cij += sp.Rational(1, 2) * (
+                    sp.diff(M_sym[i, j], q_s[k])
+                    + sp.diff(M_sym[i, k], q_s[j])
+                    - sp.diff(M_sym[j, k], q_s[i])
+                ) * qd_s[k]
+            C_sym[i, j] = sp.simplify(cij)
+
     T_sym = sp.simplify(T.subs(subs_map))
     V_sym = sp.simplify(V.subs(subs_map))
 
@@ -282,15 +321,17 @@ def planar_chain(n: int = 2,
     M_num = _lam_matrix(M_sym)
     forcing_num = _lam_vec(forcing_sym)
     gravity_num = _lam_vec(gravity_sym)
+    coriolis_num = _lam_matrix(C_sym)
     T_fun = sp.lambdify((q_s, qd_s), T_sym.subs(num), "numpy")
     V_fun = sp.lambdify((q_s, qd_s), V_sym.subs(num), "numpy")
 
     chain = PlanarChain(
         n=n, q=list(q_s), qd=list(qd_s), qdd=list(qdd_s),
         M_sym=M_sym, forcing_sym=forcing_sym, gravity_sym=gravity_sym,
+        coriolis_sym=C_sym,
         T_sym=T_sym, V_sym=V_sym,
         params={"m": m, "L": L, "c": c, "I": I, "g": g},
-        M=M_num, forcing=forcing_num, gravity=gravity_num,
+        M=M_num, forcing=forcing_num, gravity=gravity_num, coriolis=coriolis_num,
         kinetic_energy=lambda q, qd: float(T_fun(np.asarray(q, float),
                                                  np.asarray(qd, float))),
         potential_energy=lambda q, qd: float(V_fun(np.asarray(q, float),

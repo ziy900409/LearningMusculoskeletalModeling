@@ -123,6 +123,38 @@ def test_forward_inverse_roundtrip(compound_dp):
         assert np.allclose(dp.forward_dynamics(q, qd, tau_rec), qdd0, atol=1e-8)
 
 
+@pytest.mark.parametrize("fixture_name", ["point_mass_dp", "compound_dp"])
+def test_coriolis_matrix_reproduces_velocity_term(fixture_name, request):
+    """C(q,qd) @ qd must equal the velocity-dependent term forcing - gravity."""
+    dp = request.getfixturevalue(fixture_name)
+    rng = np.random.default_rng(4)
+    for _ in range(50):
+        q = rng.uniform(-np.pi, np.pi, size=dp.n)
+        qd = rng.uniform(-3.0, 3.0, size=dp.n)
+        Cqd = dp.coriolis_matrix(q, qd) @ qd
+        assert np.allclose(Cqd, dp.forcing(q, qd) - dp.gravity(q, qd), atol=1e-9)
+
+
+@pytest.mark.parametrize("fixture_name", ["point_mass_dp", "compound_dp"])
+def test_mdot_minus_2c_is_skew_symmetric(fixture_name, request):
+    """The passivity property ``Mdot - 2C`` skew-symmetric (energy conservation)."""
+    dp = request.getfixturevalue(fixture_name)
+    rng = np.random.default_rng(5)
+    eps = 1e-6
+    for _ in range(30):
+        q = rng.uniform(-np.pi, np.pi, size=dp.n)
+        qd = rng.uniform(-3.0, 3.0, size=dp.n)
+        C = dp.coriolis_matrix(q, qd)
+        # Mdot = sum_k (dM/dq_k) qd_k, via central differences of M(q).
+        Mdot = np.zeros((dp.n, dp.n))
+        for k in range(dp.n):
+            dq = np.zeros(dp.n)
+            dq[k] = eps
+            Mdot += (dp.M(q + dq, qd) - dp.M(q - dq, qd)) / (2 * eps) * qd[k]
+        S = Mdot - 2 * C
+        assert np.allclose(S, -S.T, atol=1e-5)
+
+
 def test_inverse_dynamics_of_passive_trajectory_is_zero(point_mass_dp):
     """The passive chain needs zero torque to follow its own accelerations."""
     dp = point_mass_dp
