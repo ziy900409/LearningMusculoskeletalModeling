@@ -1,0 +1,253 @@
+% =====================================================================
+% refs.bib  --  Chapter 03_kinematics_opensim
+% "從零到博士資格考" musculoskeletal-modeling learning repository
+%
+% Bibliography for the kinematics / OpenSim chapter. Cite in prose as
+% [@bibkey] (e.g. [@wu2005]). DOIs are authoritative; where an exact
+% title or full author list was not verbatim in the research digest it
+% is flagged in the summary returned to the caller.
+% =====================================================================
+
+% ---------------------------------------------------------------------
+% OpenSim software platform (foundations, Section A / notebook 05a)
+% ---------------------------------------------------------------------
+@article{delp2007,
+  author  = {Delp, Scott L. and Anderson, Frank C. and Arnold, Allison S.
+             and Loan, Peter and Habib, Ayman and John, Chand T. and
+             Guendelman, Eran and Thelen, Darryl G.},
+  title   = {{OpenSim}: Open-Source Software to Create and Analyze Dynamic
+             Simulations of Movement},
+  journal = {IEEE Transactions on Biomedical Engineering},
+  year    = {2007},
+  volume  = {54},
+  number  = {11},
+  pages   = {1940--1950},
+  doi     = {10.1109/TBME.2007.901024},
+  note    = {Introduces the OpenSim musculoskeletal modeling and
+             simulation framework used throughout this chapter.}
+}
+
+@article{dembia2020,
+  author  = {Dembia, Christopher L. and Bianco, Nicholas A. and
+             Falisse, Antoine and Hicks, Jennifer L. and Delp, Scott L.},
+  title   = {{OpenSim Moco}: Musculoskeletal Optimal Control},
+  journal = {PLoS Computational Biology},
+  year    = {2020},
+  volume  = {16},
+  number  = {12},
+  pages   = {e1008493},
+  doi     = {10.1371/journal.pcbi.1008493},
+  note    = {Moco optimal-control toolkit; the MocoTrack workflow that
+             consumes a coordinates/states reference via a TableProcessor
+             is used to track the mapped angle stream. Note: the
+             ScapulothoracicJoint is rejected by Moco (>= 1.0.0) because
+             its generalized speeds do not equal the time-derivatives of
+             its coordinates.}
+}
+
+@book{uchida2021,
+  author    = {Uchida, Thomas K. and Delp, Scott L.},
+  title     = {Biomechanics of Movement: The Science of Sports, Robotics,
+               and Rehabilitation},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA},
+  year      = {2021},
+  note      = {Textbook companion to OpenSim; reference for generalized
+               coordinates, joint frames, scaling and inverse kinematics
+               concepts taught in Section A.}
+}
+
+% ---------------------------------------------------------------------
+% Upper-extremity musculoskeletal models (notebooks 05a / 05b / 05c)
+% ---------------------------------------------------------------------
+@article{holzbaur2005,
+  author  = {Holzbaur, Katherine R. S. and Murray, Wendy M. and
+             Delp, Scott L.},
+  title   = {A Model of the Upper Extremity for Simulating Musculoskeletal
+             Surgery and Analyzing Neuromuscular Control},
+  journal = {Annals of Biomedical Engineering},
+  year    = {2005},
+  volume  = {33},
+  number  = {6},
+  pages   = {829--840},
+  doi     = {10.1007/s10439-005-3320-7},
+  note    = {Kinematic and muscle-geometry basis of the MoBL-ARMS upper
+             limb model; source of the standard Holzbaur coordinate
+             naming (elv_angle, shoulder_elv, shoulder_rot,
+             elbow_flexion, pro_sup) and a scapula prescribed as a
+             dependent function of humeral elevation.}
+}
+
+@article{saul2015,
+  author  = {Saul, Katherine R. and Hu, Xiao and Goehler, Craig M. and
+             Vidt, Meghan E. and Daly, Melissa and Velisar, Anca and
+             Murray, Wendy M.},
+  title   = {Benchmarking of Dynamic Simulation Predictions in Two Software
+             Platforms Using an Upper Limb Musculoskeletal Model},
+  journal = {Computer Methods in Biomechanics and Biomedical Engineering},
+  year    = {2015},
+  volume  = {18},
+  number  = {13},
+  pages   = {1445--1458},
+  doi     = {10.1080/10255842.2014.916698},
+  note    = {Dynamic update of the Holzbaur model yielding the MoBL-ARMS
+             Dynamic Upper Limb model (~7 kinematic DOF shoulder-to-wrist);
+             scapula/clavicle motion is coupled to humeral elevation by a
+             built-in scapulohumeral rhythm rather than free scapular DOF.}
+}
+
+@article{seth2019,
+  author  = {Seth, Ajay and Dong, Meilin and Matias, Ricardo and
+             Delp, Scott L.},
+  title   = {Muscle Contributions to Upper-Extremity Movement and Work
+             From a Musculoskeletal Model of the Human Shoulder},
+  journal = {Frontiers in Neurorobotics},
+  year    = {2019},
+  volume  = {13},
+  pages   = {90},
+  doi     = {10.3389/fnbot.2019.00090},
+  note    = {Thoracoscapular shoulder model. The scapula slides on an
+             ellipsoidal thoracic surface via a custom ScapulothoracicJoint
+             (4 DOF: abduction, elevation, upward rotation, winging), and
+             is kinematically UNCOUPLED from the humerus (no built-in
+             scapulohumeral rhythm). Used here as scapula-generation
+             method (3). Builds on the scapulothoracic joint of
+             Seth et al. 2016 (PLoS ONE).}
+}
+
+% ---------------------------------------------------------------------
+% Joint-coordinate conventions and shoulder rhythm (Section B / C)
+% ---------------------------------------------------------------------
+@article{wu2005,
+  author  = {Wu, Ge and van der Helm, Frans C. T. and Veeger, H. E. J.
+             and Makhsous, Mohsen and Van Roy, Peter and Anglin, Carolyn
+             and Nagels, Jochem and Karduna, Andrew R. and McQuade, Kevin
+             and Wang, Xuguang and Werner, Frederick W. and
+             Buchholz, Bryan},
+  title   = {{ISB} Recommendation on Definitions of Joint Coordinate
+             Systems of Various Joints for the Reporting of Human Joint
+             Motion---{Part II}: Shoulder, Elbow, Wrist and Hand},
+  journal = {Journal of Biomechanics},
+  year    = {2005},
+  volume  = {38},
+  number  = {5},
+  pages   = {981--992},
+  doi     = {10.1016/j.jbiomech.2004.05.042},
+  pmid    = {15844264},
+  note    = {ISB upper-limb standard. Thorax frame (origin at IJ) is the
+             proximal reference; recommended sequences: humerothoracic
+             Y-X-Y (plane of elevation, elevation, axial rotation),
+             scapula and clavicle Y-X-Z relative to thorax. The Y-X-Y
+             proper-Euler sequence is singular when the middle (elevation)
+             angle is 0 deg (arm at side) or 180 deg (overhead), NOT at
+             ~90 deg. Central reference for the Kinatrax->OpenSim
+             convention-mapping SOP.}
+}
+
+@article{groodsuntay1983,
+  author  = {Grood, Edward S. and Suntay, Wilfredo J.},
+  title   = {A Joint Coordinate System for the Clinical Description of
+             Three-Dimensional Motions: Application to the Knee},
+  journal = {Journal of Biomechanical Engineering},
+  year    = {1983},
+  volume  = {105},
+  number  = {2},
+  pages   = {136--144},
+  doi     = {10.1115/1.3138397},
+  note    = {Joint Coordinate System (JCS): two body-fixed axes plus a
+             mutually perpendicular floating axis. The JCS is generally
+             NON-orthogonal, so reported angles are sequence/convention
+             dependent and mathematically equivalent to a specific
+             Cardan/Euler sequence. Adopted by the ISB as the general
+             joint-motion reporting framework.}
+}
+
+@article{degroot2001,
+  author  = {de Groot, Jurriaan H. and Brand, Ron},
+  title   = {A Three-Dimensional Regression Model of the Shoulder Rhythm},
+  journal = {Clinical Biomechanics},
+  year    = {2001},
+  volume  = {16},
+  number  = {9},
+  pages   = {735--743},
+  doi     = {10.1016/S0268-0033(01)00065-1},
+  pmid    = {11714550},
+  note    = {Thorax-fixed regression predicting clavicular and scapular
+             Euler angles from humeral orientation (plus external force
+             direction and initial orientation): five linear equations,
+             10 subjects, 23 humeral positions; gender/morphology not
+             significant. Basis of scapula-generation method (2). The
+             classic overall glenohumeral:scapulothoracic ratio is ~2:1
+             but nonlinear over the elevation range.}
+}
+
+% ---------------------------------------------------------------------
+% Downstream readout only -- UCL / elbow varus moment (mentioned, not
+% implemented in this chapter)
+% ---------------------------------------------------------------------
+@article{buffi2015,
+  author  = {Buffi, James H. and Werner, Keith and Kepple, Thomas and
+             Murray, Wendy M.},
+  title   = {Computing Muscle, Ligament, and Osseous Contributions to the
+             Elbow Varus Moment During Baseball Pitching},
+  journal = {Annals of Biomedical Engineering},
+  year    = {2015},
+  volume  = {43},
+  number  = {2},
+  pages   = {404--415},
+  doi     = {10.1007/s10439-014-1144-z},
+  pmid    = {25281409},
+  note    = {Forward-dynamic pitch simulation partitioning the internal
+             elbow varus moment (which resists the injurious valgus load)
+             among muscles, ligaments (UCL/MCL) and bone. Downstream
+             context only: it presupposes joint angles/coordinates already
+             correctly defined and mapped, which is the job of this
+             kinematics chapter.}
+}
+
+% ---------------------------------------------------------------------
+% Added: OpenSim API reference and rotation-sequence comparison
+% ---------------------------------------------------------------------
+@article{sethopensim2018,
+  author  = {Seth, Ajay and Hicks, Jennifer L. and Uchida, Thomas K. and
+             Habib, Ayman and Dembia, Christopher L. and Dunne, James J.
+             and Ong, Carmichael F. and DeMers, Matthew S. and
+             Rajagopal, Apoorva and Millard, Matthew and Hamner, Samuel R.
+             and Arnold, Edith M. and Yong, Jennifer R. and
+             Lakshmikanth, Shrinidhi K. and Sherman, Michael A. and
+             Ferstein, Kevin and Delp, Scott L.},
+  title   = {{OpenSim}: Simulating Musculoskeletal Dynamics and
+             Neuromuscular Control to Study Human and Animal Movement},
+  journal = {PLoS Computational Biology},
+  year    = {2018},
+  volume  = {14},
+  number  = {7},
+  pages   = {e1006223},
+  doi     = {10.1371/journal.pcbi.1006223},
+  pmid    = {30048444},
+  note    = {Modern OpenSim architecture paper: the Component/Socket
+             framework, Frame (PhysicalOffsetFrame), Joint and Coordinate
+             abstractions, and the SimTK::State realization stages that
+             the Section-A API examples (getTransformInGround,
+             SpatialTransform, initSystem/realizePosition) rely on.}
+}
+
+@article{phadke2011,
+  author  = {Phadke, Vandana and Braman, Jonathan P. and
+             LaPrade, Robert F. and Ludewig, Paula M.},
+  title   = {Comparison of Glenohumeral Motion Using Different
+             Rotation Sequences},
+  journal = {Journal of Biomechanics},
+  year    = {2011},
+  volume  = {44},
+  number  = {4},
+  pages   = {700--705},
+  doi     = {10.1016/j.jbiomech.2010.10.042},
+  pmid    = {21093867},
+  note    = {Shows that reported glenohumeral angles depend strongly on
+             the chosen Euler/Cardan rotation sequence, and that some
+             sequences move the gimbal-lock singularity out of the
+             functional elevation range. Supports Section B's argument
+             that a source system's sequence must be known before its
+             angles can be mapped to OpenSim coordinates.}
+}
