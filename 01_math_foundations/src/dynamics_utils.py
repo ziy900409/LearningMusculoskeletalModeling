@@ -47,6 +47,7 @@ Author: Stage-1 notes, musculoskeletal-modeling learning path.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Callable, Sequence
 
 import numpy as np
@@ -183,6 +184,95 @@ class PlanarChain:
         return np.column_stack([x, y])
 
 
+@lru_cache(maxsize=None)
+def _derive_symbolic(n: int) -> dict:
+    """Symbolic Lagrangian derivation for an ``n``-link planar chain.
+
+    Returns the mass matrix, forcing / gravity / Coriolis terms and the energies
+    in *generic* inertial symbols (``m_i, L_i, c_i, I_i, g``).  The algebra
+    depends only on ``n``, so this (relatively expensive) SymPy work is cached
+    and reused by every :func:`planar_chain` call with the same ``n`` -- e.g. the
+    point-mass and compound double pendulums share a single derivation.
+    """
+    t = sp.symbols("t", real=True)
+    q_f = [sp.Function(f"q{i+1}")(t) for i in range(n)]          # q_i(t)
+    qd_s = sp.symbols(f"qd1:{n+1}", real=True)                    # generic velocity syms
+    qdd_s = sp.symbols(f"qdd1:{n+1}", real=True)                  # generic accel syms
+    q_s = sp.symbols(f"q1:{n+1}", real=True)                      # generic pos syms
+    ms = sp.symbols(f"m1:{n+1}", positive=True)
+    Ls = sp.symbols(f"L1:{n+1}", positive=True)
+    cs = sp.symbols(f"c1:{n+1}", nonnegative=True)
+    Is = sp.symbols(f"I1:{n+1}", nonnegative=True)
+    gsym = sp.symbols("g", positive=True)
+
+    # ---- forward kinematics of centres of mass (proximal joints accumulate) -----------
+    Xj = [sp.Integer(0)]
+    Yj = [sp.Integer(0)]
+    for i in range(n):
+        Xj.append(Xj[-1] + Ls[i] * sp.sin(q_f[i]))
+        Yj.append(Yj[-1] - Ls[i] * sp.cos(q_f[i]))
+
+    T = sp.Integer(0)
+    V = sp.Integer(0)
+    for i in range(n):
+        xc = Xj[i] + cs[i] * sp.sin(q_f[i])
+        yc = Yj[i] - cs[i] * sp.cos(q_f[i])
+        vx = sp.diff(xc, t)
+        vy = sp.diff(yc, t)
+        omega = sp.diff(q_f[i], t)                 # absolute angular velocity = qd_i
+        T += sp.Rational(1, 2) * ms[i] * (vx**2 + vy**2) + sp.Rational(1, 2) * Is[i] * omega**2
+        V += ms[i] * gsym * yc
+
+    # ---- Euler-Lagrange:  d/dt (dL/dqd_i) - dL/dq_i = tau_i ---------------------------
+    # No simplify on the Lagrangian: we only need its derivatives, and simplifying
+    # the small final matrices below is far cheaper than simplifying L itself.
+    Lag = T - V
+    q_dot = [sp.diff(f, t) for f in q_f]
+    q_ddot = [sp.diff(f, t, 2) for f in q_f]
+    EOM = sp.Matrix([sp.diff(sp.diff(Lag, qd), t) - sp.diff(Lag, f)
+                     for f, qd in zip(q_f, q_dot)])
+
+    # substitute the time-functions with plain symbols so we can lambdify later
+    subs_map = {}
+    for i in range(n):
+        subs_map[q_ddot[i]] = qdd_s[i]
+        subs_map[q_dot[i]] = qd_s[i]
+        subs_map[q_f[i]] = q_s[i]
+    EOM_s = EOM.subs(subs_map)
+
+    # M(q) = d(EOM)/d(qdd);  forcing = EOM|_{qdd=0} = C(q,qd) qd + g(q).
+    # trigsimp keeps the printed forms readable; the numerics are form-independent.
+    M_sym = sp.trigsimp(EOM_s.jacobian(sp.Matrix(qdd_s)))
+    forcing_sym = sp.trigsimp(EOM_s.subs({a: 0 for a in qdd_s}))
+    gravity_sym = sp.trigsimp(forcing_sym.subs({v: 0 for v in qd_s}))
+
+    # Coriolis matrix C(q, qd) via Christoffel symbols of the first kind:
+    #   C_ij = sum_k 1/2 ( dM_ij/dq_k + dM_ik/dq_j - dM_jk/dq_i ) qd_k
+    # This particular C makes (Mdot - 2C) skew-symmetric (=> energy conservation,
+    # passivity) and satisfies C(q,qd) qd = forcing - gravity.
+    C_sym = sp.zeros(n, n)
+    for i in range(n):
+        for j in range(n):
+            cij = sp.Integer(0)
+            for k in range(n):
+                cij += sp.Rational(1, 2) * (
+                    sp.diff(M_sym[i, j], q_s[k])
+                    + sp.diff(M_sym[i, k], q_s[j])
+                    - sp.diff(M_sym[j, k], q_s[i])
+                ) * qd_s[k]
+            C_sym[i, j] = sp.trigsimp(cij)
+
+    T_sym = sp.trigsimp(T.subs(subs_map))
+    V_sym = sp.trigsimp(V.subs(subs_map))
+
+    return {
+        "q_s": q_s, "qd_s": qd_s, "qdd_s": qdd_s,
+        "ms": ms, "Ls": Ls, "cs": cs, "Is": Is, "gsym": gsym,
+        "M_sym": M_sym, "forcing_sym": forcing_sym, "gravity_sym": gravity_sym,
+        "coriolis_sym": C_sym, "T_sym": T_sym, "V_sym": V_sym,
+    }
+
+
 def planar_chain(n: int = 2,
                  m: Sequence[float] | None = None,
                  L: Sequence[float] | None = None,
@@ -224,80 +314,12 @@ def planar_chain(n: int = 2,
         if len(arr) != n:
             raise ValueError(f"parameter {name!r} must have length n={n}, got {len(arr)}")
 
-    t = sp.symbols("t", real=True)
-    q_f = [sp.Function(f"q{i+1}")(t) for i in range(n)]          # q_i(t)
-    qd_s = sp.symbols(f"qd1:{n+1}", real=True)                    # generic velocity syms
-    qdd_s = sp.symbols(f"qdd1:{n+1}", real=True)                  # generic accel syms
-    q_s = sp.symbols(f"q1:{n+1}", real=True)                      # generic pos syms
-    ms = sp.symbols(f"m1:{n+1}", positive=True)
-    Ls = sp.symbols(f"L1:{n+1}", positive=True)
-    cs = sp.symbols(f"c1:{n+1}", nonnegative=True)
-    Is = sp.symbols(f"I1:{n+1}", nonnegative=True)
-    gsym = sp.symbols("g", positive=True)
-
-    # ---- forward kinematics of centres of mass ---------------------------------------
-    # proximal joint positions accumulate along the chain
-    Xj = [sp.Integer(0)]
-    Yj = [sp.Integer(0)]
-    for i in range(n):
-        Xj.append(Xj[-1] + Ls[i] * sp.sin(q_f[i]))
-        Yj.append(Yj[-1] - Ls[i] * sp.cos(q_f[i]))
-
-    T = sp.Integer(0)
-    V = sp.Integer(0)
-    for i in range(n):
-        xc = Xj[i] + cs[i] * sp.sin(q_f[i])
-        yc = Yj[i] - cs[i] * sp.cos(q_f[i])
-        vx = sp.diff(xc, t)
-        vy = sp.diff(yc, t)
-        omega = sp.diff(q_f[i], t)                 # absolute angular velocity = qd_i
-        T += sp.Rational(1, 2) * ms[i] * (vx**2 + vy**2) + sp.Rational(1, 2) * Is[i] * omega**2
-        V += ms[i] * gsym * yc
-
-    Lag = sp.expand_trig(sp.simplify(T - V))
-
-    # ---- Euler-Lagrange:  d/dt (dL/dqd_i) - dL/dq_i = tau_i ---------------------------
-    q_dot = [sp.diff(f, t) for f in q_f]
-    q_ddot = [sp.diff(f, t, 2) for f in q_f]
-    EOM = []
-    for i in range(n):
-        dL_dqd = sp.diff(Lag, q_dot[i])
-        term = sp.diff(dL_dqd, t) - sp.diff(Lag, q_f[i])
-        EOM.append(sp.simplify(term))
-    EOM = sp.Matrix(EOM)
-
-    # substitute the time-functions with plain symbols so we can lambdify
-    subs_map = {}
-    for i in range(n):
-        subs_map[q_ddot[i]] = qdd_s[i]
-        subs_map[q_dot[i]] = qd_s[i]
-        subs_map[q_f[i]] = q_s[i]
-    EOM_s = EOM.subs(subs_map)
-
-    # M(q) = d(EOM)/d(qdd);  forcing = EOM|_{qdd=0} = C(q,qd) qd + g(q)
-    M_sym = EOM_s.jacobian(sp.Matrix(qdd_s))
-    M_sym = sp.simplify(M_sym)
-    forcing_sym = sp.simplify(EOM_s.subs({a: 0 for a in qdd_s}))
-    gravity_sym = sp.simplify(forcing_sym.subs({v: 0 for v in qd_s}))
-
-    # Coriolis matrix C(q, qd) via Christoffel symbols of the first kind:
-    #   C_ij = sum_k 1/2 ( dM_ij/dq_k + dM_ik/dq_j - dM_jk/dq_i ) qd_k
-    # This particular C makes (Mdot - 2C) skew-symmetric (=> energy conservation,
-    # passivity) and satisfies C(q,qd) qd = forcing - gravity.
-    C_sym = sp.zeros(n, n)
-    for i in range(n):
-        for j in range(n):
-            cij = sp.Integer(0)
-            for k in range(n):
-                cij += sp.Rational(1, 2) * (
-                    sp.diff(M_sym[i, j], q_s[k])
-                    + sp.diff(M_sym[i, k], q_s[j])
-                    - sp.diff(M_sym[j, k], q_s[i])
-                ) * qd_s[k]
-            C_sym[i, j] = sp.simplify(cij)
-
-    T_sym = sp.simplify(T.subs(subs_map))
-    V_sym = sp.simplify(V.subs(subs_map))
+    # symbolic derivation depends only on n -> cached and reused (see _derive_symbolic)
+    sym = _derive_symbolic(n)
+    q_s, qd_s, qdd_s = sym["q_s"], sym["qd_s"], sym["qdd_s"]
+    ms, Ls, cs, Is, gsym = sym["ms"], sym["Ls"], sym["cs"], sym["Is"], sym["gsym"]
+    M_sym, forcing_sym, gravity_sym = sym["M_sym"], sym["forcing_sym"], sym["gravity_sym"]
+    C_sym, T_sym, V_sym = sym["coriolis_sym"], sym["T_sym"], sym["V_sym"]
 
     # ---- bake numeric parameters and lambdify ----------------------------------------
     num = {}

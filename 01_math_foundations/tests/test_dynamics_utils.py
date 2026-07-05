@@ -167,6 +167,27 @@ def test_inverse_dynamics_of_passive_trajectory_is_zero(point_mass_dp):
                            np.zeros(2), atol=1e-8)
 
 
+def test_rayleigh_damping_monotonically_dissipates_energy(point_mass_dp):
+    """Rayleigh damping tau = -b*qd drives mechanical energy monotonically down.
+
+    With a dissipation function F = 1/2 sum b_i qd_i^2 the generalized force is
+    Q = -dF/dqd = -b*qd, so dE/dt = qd^T Q = -sum b_i qd_i^2 <= 0.  This is the
+    complementary check to energy *conservation*: with damping, energy must
+    strictly leak.
+    """
+    dp = point_mass_dp
+    b = np.array([0.5, 0.5])
+    damping = lambda t, q, qd: -b * qd
+    y0 = np.array([np.radians(120), np.radians(-10), 0.0, 0.0])
+    sol = solve_ivp(dp.state_derivative, (0, 10), y0, args=(damping,),
+                    method="DOP853", rtol=1e-10, atol=1e-12, max_step=0.01)
+    assert sol.success
+    Q, QD = sol.y[:2].T, sol.y[2:].T
+    _, _, E = dp.energies(Q, QD)
+    assert np.max(np.diff(E)) <= 1e-6      # never meaningfully increases
+    assert E[-1] < E[0] - 1.0              # substantial dissipation over 10 s
+
+
 # --------------------------------------------------------------------------------------
 # 5. energy_drift normalisation (the C3 fix)
 # --------------------------------------------------------------------------------------
