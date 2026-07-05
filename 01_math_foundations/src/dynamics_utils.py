@@ -110,6 +110,21 @@ class PlanarChain:
         rhs = np.asarray(tau, dtype=float) - self.forcing(q, qd)
         return np.linalg.solve(self.M(q, qd), rhs)
 
+    def inverse_dynamics(self, q: np.ndarray, qd: np.ndarray,
+                         qdd: np.ndarray) -> np.ndarray:
+        """Return the joint torques ``tau`` that produce a prescribed motion.
+
+        Evaluates the manipulator form ``tau = M(q) qdd + C(q,qd) qd + g(q)``.
+        This is the exact left inverse of :meth:`forward_dynamics`
+        (``inverse_dynamics(q, qd, forward_dynamics(q, qd, tau)) == tau``) and is
+        the analogue of OpenSim's ``InverseDynamicsTool``: given kinematics
+        ``q, qd, qdd`` (e.g. from motion capture) it returns the net joint moments.
+        """
+        q = np.asarray(q, dtype=float)
+        qd = np.asarray(qd, dtype=float)
+        qdd = np.asarray(qdd, dtype=float)
+        return self.M(q, qd) @ qdd + self.forcing(q, qd)
+
     def state_derivative(self, t: float, y: np.ndarray,
                          tau_fn: Callable | None = None) -> np.ndarray:
         """RHS for ``scipy.integrate.solve_ivp`` with state ``y = [q, qd]``.
@@ -329,15 +344,35 @@ def limb_chain(segments=("thigh", "shank"), body_mass=70.0, height=1.75,
 # --------------------------------------------------------------------------------------
 # Energy-drift diagnostic (the Stage-1 milestone metric)
 # --------------------------------------------------------------------------------------
-def energy_drift(E: np.ndarray) -> dict:
+def energy_drift(E: np.ndarray, scale: float | None = None) -> dict:
     """Summarise energy conservation over a trajectory.
 
-    Returns absolute and *relative* drift.  The Stage-1 self-assessment target is
-    ``rel_range < 1%`` for a passive chain integrated for ~10 s.
+    Returns absolute and *relative* drift.  Relative drift is normalised by an
+    energy *scale* that is independent of the drift being measured -- by default
+    ``max_t |E(t)|``.  (An earlier version divided by ``max(|E0|, ptp(E))``; the
+    ``ptp`` term put the quantity being measured into the denominator, which
+    silently capped ``rel_range`` at 1 and made the metric meaningless whenever
+    ``E0`` sat near zero because of the potential-energy datum.)
+
+    Parameters
+    ----------
+    E : array_like
+        Total mechanical energy sampled along the trajectory.
+    scale : float, optional
+        Override the normalising energy scale.  Useful when ``E`` crosses zero
+        (arbitrary potential datum): pass e.g. the kinetic-energy amplitude so
+        the relative figure reflects the true energy scale of the motion.
+
+    Notes
+    -----
+    The Stage-1 self-assessment target is ``rel_range < 1%`` for a passive chain
+    integrated for ~10 s.
     """
     E = np.asarray(E, dtype=float)
     E0 = E[0]
-    scale = max(abs(E0), np.ptp(E), 1e-12)
+    if scale is None:
+        scale = np.max(np.abs(E))
+    scale = max(float(scale), 1e-12)
     return {
         "E0": float(E0),
         "abs_max_dev": float(np.max(np.abs(E - E0))),
