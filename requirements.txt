@@ -1,0 +1,16 @@
+# Pure-Python dependencies for the pinned Stage 1 (math foundations) workflow.
+# Verified working set (2026-07): numpy/scipy/sympy pinned exactly because
+# lambdify behaviour and solver defaults have shifted across their releases.
+#
+#   pip install -r requirements.txt
+#
+# NOTE: Stage 3 (OpenSim kinematics) additionally needs the OpenSim 4.x Python
+# bindings, which are installed via conda, not pip -- see
+# 03_kinematics_opensim/README.md.
+numpy==1.26.4
+scipy==1.13.1
+sympy==1.13.2
+matplotlib>=3.7
+jupyter>=1.0
+nbconvert>=7.0
+pytest>=7.4

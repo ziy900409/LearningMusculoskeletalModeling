@@ -1,5 +1,8 @@
 # 01 · 數學基礎 (Math Foundations)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ziy900409/LearningMusculoskeletalModeling/blob/main/01_math_foundations/notebooks/01_lagrangian_double_pendulum.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/ziy900409/LearningMusculoskeletalModeling/main?labpath=01_math_foundations/notebooks/01_lagrangian_double_pendulum.ipynb)
+
 肌肉骨骼模擬學習路徑的 **Stage 1**。目標：親手從第一原理推出貫穿全課程的運動方程
 
 $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$

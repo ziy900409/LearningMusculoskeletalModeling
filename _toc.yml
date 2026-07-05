@@ -12,6 +12,10 @@ parts:
         title: Notebook · 雙擺符號推導與模擬
       - file: 01_math_foundations/exercises/exercise_01_triple_pendulum
         title: 練習 · 三擺里程碑
+  - caption: 附錄 (Appendix)
+    chapters:
+      - file: GLOSSARY
+        title: 名詞對照總表
   # Stage 3 尚未併入版控。待 `git add 03_kinematics_opensim` 後取消下列註解即可納入書中
   # （並先處理 E5：把 [@key] 轉為 {cite}）。
   # - caption: Stage 3 · OpenSim 運動學 (Kinematics)

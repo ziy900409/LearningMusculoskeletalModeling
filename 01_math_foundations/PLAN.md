@@ -49,10 +49,10 @@
   作為**第二個純符號、與積分無關的正確性指標**（混沌下能量守恆只是必要條件）。此性質 Stage 7 CMC/被動性控制會直接用到。
   *位置*：`notes.md` §3；`dynamics_utils.py` 可加 `coriolis_matrix()` 與對應檢查。
 
-- [ ] **B2 · P2 · [folder]** 加非保守耗散（Rayleigh 耗散函數）$\mathcal F=\tfrac12\sum b_i\dot q_i^2$、$Q_i=-\partial\mathcal F/\partial\dot q_i$，
+- [x] **B2 · P2 · [folder]** ✅ 已完成（notes §6.4 + `test_rayleigh_damping_...`）。加非保守耗散（Rayleigh 耗散函數）$\mathcal F=\tfrac12\sum b_i\dot q_i^2$、$Q_i=-\partial\mathcal F/\partial\dot q_i$，
   演示「加阻尼後能量**單調遞減**」當作另一個驗證，並連結關節/肌肉阻尼。
 
-- [ ] **B3 · P2 · [folder]** 深化 §6.3 積分器教訓：點出**非辛（non-symplectic）積分器有 secular energy drift，與階數無關**；
+- [x] **B3 · P2 · [folder]** ✅ 已完成（notes §6.3 新增「結構比階數更根本」段）。深化 §6.3 積分器教訓：點出**非辛（non-symplectic）積分器有 secular energy drift，與階數無關**；
   辛/變分積分器即使二階也能讓能量在有界帶內振盪。結論：「積分器的**結構**比**階數**更根本。」
 
 ---
@@ -72,11 +72,12 @@
   把 `ptp` 放進分母會讓 `rel_range` 上限鎖在 1，且 $E_0\approx0$ 時失真（自測 $E_0=0.149\,\mathrm J$ 已偏小）。
   改用物理尺度如 $\max_t|E(t)|$ 或動能量級作分母。
 
-- [ ] **C4 · P2 · [folder]** 符號化簡效能：實測建構 $n{=}2$ 約 1.5s、$n{=}3$ 約 6.8s。
-  全 `sp.simplify`（[`src/dynamics_utils.py:228,241`](src/dynamics_utils.py)）成長偏陡；改用 `trigsimp`/`cancel` 並加 `functools.lru_cache` 或落盤快取。
+- [x] **C4 · P2 · [folder]** ✅ 已完成。符號推導抽成 `_derive_symbolic(n)` 並用 `functools.lru_cache` 依 $n$ 快取，
+  `simplify`→`trigsimp`、去掉對 Lagrangian 的化簡。實測：$n{=}2$ 冷 1.5→0.96s、$n{=}3$ 冷 6.8→4.4s、
+  同 $n$ 重建（測試 fixtures）1.5s→0.03s；測試套件 4.4s→2.0s。
 
-- [ ] **C5 · P1 · [repo]** 加 `requirements.txt` / `environment.yml` 釘版本。
-  實測可用組合：`sympy 1.13.2 / scipy 1.13.1 / numpy 1.26.4`。（同時服務可讀性——見 D6。）
+- [x] **C5 · P1 · [repo]** ✅ 已完成（根目錄 `requirements.txt`，`numpy/scipy/sympy` 釘死於 `1.26.4/1.13.1/1.13.2`）。
+  Stage 3 的 OpenSim 綁定另循 conda（README 已載明）。
 
 ---
 
@@ -106,33 +107,35 @@
 - [x] **D5 · P1 · [folder]** 動機與目標「上移」。 ✅ 已完成（Stage 1 `README.md` 頂部新增〈學習目標／里程碑／前置後續〉box）。
   Stage 3 README 已有「本章定位」置頂 box；其餘各站依 `STAGE_TEMPLATE.md` 比照辦理。
 
-- [ ] **D6 · P2 · [folder]** 圖直接內嵌進 `notes.md`。`figures/` 有 6 張已產生的圖，但敘述只寫「見 notebook §3、§5」。
-  把對應 PNG 內嵌到相關段落（能量守恆圖 → §6.2、混沌分岔圖 → §7…），不跑程式的讀者也能看到結論。
+- [x] **D6 · P2 · [folder]** ✅ 已完成。5 張圖內嵌 notes.md：相圖→§6.1、能量→§6.2、混沌→§7、腿→§8、正逆一致性→§5。
 
-- [ ] **D7 · P2 · [repo]** 零安裝入口：`requirements.txt`（見 C5）+ **Binder / Colab 徽章**，讓讀者不必本機安裝就能執行 notebook。
+- [x] **D7 · P2 · [repo]** ✅ 已完成。Stage 1 README 加 **Colab / Binder 徽章**（指向雙擺 notebook；Binder 讀根目錄 `requirements.txt`）。
 
-- [ ] **D8 · P2 · [repo]** 專案級術語表：各 `notes.md` §9 已有 glossary，升級成一份 project-level glossary，每詞連回「首次出現的 stage」。
+- [x] **D8 · P2 · [repo]** ✅ 已完成（根目錄 `GLOSSARY.md`，每詞連回首次出現的站/節；已納入書 TOC「附錄」）。
 
 ---
 
 ## E. 參考文獻與教學細節
 
-- [ ] **E1 · P2 · [folder]** `refs.bib` 補經典缺漏：
+- [x] **E1 · P2 · [folder]** ✅ 已完成（An 1984、Zajac&Gordon 1989 於 step 3；Hicks 2015、Zajac 1989 muscle 於 step 5；Lynch/Zhang 標為延伸閱讀）。`refs.bib` 補經典缺漏：
   **Zajac (1989)** muscle model + induced acceleration、**An et al. (1984)** moment arm via tendon excursion（支撐 A1）、
   **Hicks et al. (2015, *J Biomech Eng*)** 模擬驗證最佳實務（正是 §6「先驗證再相信結論」的原始出處）。
   已列未引用的 Lynch & Park、Zhang & Fan 標為「延伸閱讀」。
 
-- [ ] **E2 · P2 · [folder]** 練習加「預期數值」self-check 區塊（給定初始條件的 10 秒 `rel_range_pct` 參考值），讓自學者能對答案。
-  *位置*：`exercises/exercise_01_triple_pendulum.md`。
+- [x] **E2 · P2 · [folder]** ✅ 已完成。`exercises/exercise_01_triple_pendulum.md` 加〈預期數值〉：$E_0\approx-21.82$ J、
+  `rel_range_pct` $\approx 3.6\times10^{-9}\%$。
 
-- [ ] **E3 · P2 · [folder]** 把已執行 notebook 匯出 HTML（`nbconvert --to html`）方便 GitHub 直接檢視；`figures/` 加一行 provenance 說明由哪個 cell 產生。
+- [~] **E3 · P2 · [folder]** 🟡 部分完成。`figures/README.md` provenance 已加。**HTML 匯出略過**：Jupyter Book（D3）
+  已提供可導覽的 notebook 渲染，另存靜態 HTML 屬重複產物，故不納入版控。
 
-- [ ] **E4 · P2 · [folder]** 前瞻連結（可選）：在混沌節（§7）或 §8 提一句「釘住基座 vs 自由漂浮基座」——
+- [x] **E4 · P2 · [folder]** ✅ 已完成（notes §8 前瞻 box：pinned vs floating base、飛行期角動量守恆 → Stage 2）。前瞻連結：在混沌節（§7）或 §8 提一句「釘住基座 vs 自由漂浮基座」——
   飛行期全身**角動量守恆**（空翻、貓翻身）預告 Stage 2 floating-base，讓「為什麼要 floating base」有動機。
 
-- [ ] **E5 · P2 · [repo]** Jupyter Book 引用相容性：Stage 3 `notes.md`/`README.md` 的 pandoc 式 `[@key]` 內文引用
-  在 MyST 不會渲染成引用，需轉為 `` {cite}`key` ``（或 `{cite:t}`）並在頁尾加 `` ```{bibliography} `` 指令、
-  於 `_config.yml` 設 `bibtex_bibfiles`。Stage 1 用散文式引用，無此問題。（D3 的後續打磨。）
+- [~] **E5 · P2 · [repo]** 🟡 **刻意延後**（有技術理由）。Stage 3 `notes.md`/`README.md` 的 pandoc 式 `[@key]`
+  在 MyST 不會渲染成引用，需轉為 `` {cite}`key` `` + 頁尾 `` ```{bibliography} `` + `_config.yml` 設 `bibtex_bibfiles`。
+  **為何延後**：(1) Stage 3 尚未進版控、也未納入書 TOC；(2) `{cite}` 在 GitHub 原生 markdown 一樣不渲染，
+  現在轉反而讓 GitHub 檢視更差。**時機**：等 Stage 3 `git add` 並取消 `_toc.yml` 註解、真正併入書時再一併做。
+  Stage 1 用散文式引用，無此問題。
 
 ---
 
@@ -150,4 +153,4 @@
 - [ ] 每站開頭即見「學習目標 + 通過標準」；結尾有上一站/下一站。
 - [x] `pytest` 綠燈，涵蓋能量守恆、$M$ 正定、點質量閉式、forward↔inverse 往返、$\dot M-2C$ 反對稱（13 條）。
 - [x] `notes.md` 能從 $\tau$ 一路講到 $\tau = R(q)F$ 的冗餘，銜接 Stage 6。
-- [ ] `pip install -r requirements.txt` 後可一鍵重現 notebook 與 `figures/`。
+- [x] `pip install -r requirements.txt` 後可一鍵重現 Stage 1 notebook 與 `figures/`（Stage 3 另循 conda/OpenSim）。

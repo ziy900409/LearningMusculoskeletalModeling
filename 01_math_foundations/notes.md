@@ -266,6 +266,8 @@ $$
 
 notebook §7 用一個「正向 → 逆向」一致性回路演示兩者互為反運算。
 
+![正向 → 逆向動力學一致性回路：由 $\tau$ 積分出運動，再以逆向動力學還原 $\tau$，兩者吻合。](figures/06_forward_inverse_consistency.png)
+
 ---
 
 ## 6. 數值積分與穩定性
@@ -281,15 +283,20 @@ $$
 
 用 `scipy.integrate.solve_ivp` 積分。
 
+![雙擺被動運動的軌跡與相圖（$q$ vs $\dot q$）：混沌但確定性的軌道。](figures/03_phase_portrait.png)
+
 ### 6.2 能量守恆是最好的驗證
 
 被動系統（$\tau=0$、無耗散）總機械能 $E = T + V$ **必守恆**。因此
 
 $$
-\text{相對能量漂移} \equiv \frac{\max_t E(t) - \min_t E(t)}{|E_0|}
+\text{相對能量漂移} \equiv \frac{\max_t E(t) - \min_t E(t)}{\max_t|E(t)|}
 $$
 
 是一個**與程式無關**的正確性指標。**Stage 1 里程碑：10 秒積分，此值 $< 1\%$。**
+（分母用 $\max_t|E|$ 而非 $|E_0|$，以免位能零點恰使 $E_0\approx0$ 時失真——見 `energy_drift`。）
+
+![總機械能 $E(t)$ 隨時間幾乎為常數：DOP853（嚴容差）相對漂移達 $\sim10^{-7}\%$，遠優於 $1\%$ 里程碑。](figures/02_energy_conservation.png)
 
 ### 6.3 積分器的教訓（Stage 4 / 8 的前哨）
 
@@ -300,7 +307,33 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
   20:20220430）的縮影——肌腱勁度使系統變 stiff，需小步長或隱式方法。
 - 為何 OpenSim 的 **Simbody 採用誤差受控 (error-controlled)** 變步長積分器。
 
-> **實務守則**：跑任何正向動力學模擬前，先用能量守恆／已知解驗證你的積分設定，再相信科學結論。
+**更深一層：結構比階數更根本。** 「低階漏能量」只是表象，真正的分野是**辛性 (symplecticity)**。
+RK45／DOP853 這類（非辛的）Runge–Kutta 法無論階數多高，長時間都有**系統性、單向累積的能量漂移
+(secular drift)**——只是階數越高、容差越嚴，漂移越慢。相對地，**辛／變分積分器**（如
+Störmer–Verlet／leapfrog）即使只有二階，也能讓能量**在有界帶內振盪、不單向漂移**。
+所以挑積分器時，先看它的**結構**（辛？誤差受控？隱式？）再看階數。
+
+> **實務守則**：跑任何正向動力學模擬前，先用能量守恆／已知解驗證你的積分設定，再相信科學結論
+> （Hicks et al. 2015 的模擬驗證清單即以此為核心）。
+
+### 6.4 加入耗散：能量單調遞減（另一個驗證）
+
+真實關節與肌肉有**阻尼**。在 Lagrangian 框架中，線性黏性阻尼可用 **Rayleigh 耗散函數**
+
+$$
+\mathcal F(\dot q) = \tfrac12\sum_i b_i\dot q_i^2
+$$
+
+表達，對應的非保守廣義力為 $Q_i = -\partial\mathcal F/\partial\dot q_i = -b_i\dot q_i$。代回 §3.5 的能量率
+結果 $\dot E = \dot q^\top\tau$（此處 $\tau=Q$）得
+
+$$
+\frac{dE}{dt} = -\sum_i b_i\dot q_i^2 \;\le\; 0 ,
+$$
+
+即**機械能單調遞減**（僅在 $\dot q=0$ 瞬間持平）。這是與能量守恆互補的檢驗：把 $\tau_i=-b_i\dot q_i$
+當作 `tau_fn` 餵給 `state_derivative`，**能量曲線必須逐點不遞增**（`tests/` 已含此檢驗）。
+生物力學上，這個 $-b\dot q$ 項就是關節被動阻尼、肌肉短程黏性的最簡模型。
 
 ---
 
@@ -308,6 +341,8 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 
 雙擺是**決定性混沌**的教科書範例：初始角相差 $10^{-3}$ 度，數秒後軌跡完全分岔
 （notebook §5 顯示分離量呈指數成長）。
+
+![兩組初始角僅差 $10^{-3}$ 度的軌跡分離量隨時間呈指數成長（縱軸為對數）：決定性混沌。](figures/04_chaos_sensitivity.png)
 
 **生物力學意涵**：**正向預測模擬**（predictive simulation，如 Moco 的 squat-to-stand、
 步態預測）對模型參數與初始狀態高度敏感。實務上常靠
@@ -327,8 +362,15 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 `limb_chain`）。這是步態**擺動期**的「腿即鐘擺」模型。真實肢段是**複合連桿**
 （$c_i<L_i$、$I_i>0$），恰好用到一般式的質量矩陣。
 
+![大腿 + 小腿雙段肢段的被動擺動快照：步態擺動期的「腿即鐘擺」模型。](figures/05_leg_swing.png)
+
 > **注意**：這些比例僅為教學預設值；**受試者專屬**的慣性參數要靠 Stage 3 的 OpenSim scaling
 > 從標記點與體型回歸而來，不能直接沿用。
+
+> **前瞻（→ Stage 2）：釘住基座 vs 自由漂浮基座。** 本章的擺是**釘在慣性點**（pinned base），
+> 故重力對支點有力矩、角動量不守恆。但人體在**飛行期**（跳躍、空翻、投擲騰空）是**自由漂浮基座
+> (floating base)**：一旦離地便無外部力矩，**全身對質心的角動量守恆**——這正是體操「貓翻身」
+> 藉改變慣量重新定向、卻不改變總角動量的原理。要表達它，就需要 Stage 2 的浮動基座多體動力學。
 
 ---
 
@@ -368,3 +410,8 @@ notebook §3 比較 RK45（5 階）與 DOP853（8 階）：低階、寬容差會
 - **Featherstone (2008)** *Rigid Body Dynamics Algorithms*, Ch. 1–3（空間代數、為 Stage 2 鋪路）。
 - **Uchida & Delp (2021)** *Biomechanics of Movement*, Ch. 6（dynamics）。
 - **Yeo, Verheul, Herzog & Sueda (2023)** Hill-type 模型數值穩定性, *J. R. Soc. Interface* 20:20220430。
+- **Hicks, Uchida, Seth, Rajagopal & Delp (2015)** 模擬的驗證與可信度最佳實務, *J. Biomech. Eng.* 137:020905 —— §6「先驗證再相信」的原始出處。
+- **Zajac (1989)** Hill 型肌肉／肌腱模型（性質、縮放、應用）, *Crit. Rev. Biomed. Eng.* 17:359–411 —— Stage 4 肌肉模型的基礎。
+
+**延伸閱讀**：Lynch & Park (2017) *Modern Robotics*（旋量、指數積公式，Stage 2 的另一路徑）；
+Zhang & Fan (2015) *Computational Biomechanics of the Musculoskeletal System*（有限元與組織力學）。
