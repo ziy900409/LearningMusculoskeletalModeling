@@ -155,6 +155,89 @@
   note    = {Hill-type muscle-tendon model; foundation for Stage 4}
 }
 
+% --- Part 2: quaternions, SO(3) and 3D rotation (Sections 11-20) ---
+@inproceedings{shoemake1985quaternion,
+  title     = {Animating rotation with quaternion curves},
+  author    = {Shoemake, Ken},
+  booktitle = {Proceedings of SIGGRAPH '85},
+  pages     = {245--254},
+  year      = {1985},
+  doi       = {10.1145/325334.325242},
+  note      = {Origin of SLERP; quaternion interpolation for animation}
+}
+
+@article{sola2017quaternion,
+  title   = {Quaternion kinematics for the error-state Kalman filter},
+  author  = {Sol{\`a}, Joan},
+  journal = {arXiv preprint arXiv:1711.02508},
+  year    = {2017},
+  note    = {Authoritative reference on quaternion conventions, qdot = 1/2 q (X) omega, IMU attitude}
+}
+
+@article{grassia1998exponential,
+  title   = {Practical parameterization of rotations using the exponential map},
+  author  = {Grassia, F. Sebastian},
+  journal = {Journal of Graphics Tools},
+  volume  = {3},
+  number  = {3},
+  pages   = {29--48},
+  year    = {1998},
+  doi     = {10.1080/10867651.1998.10487493},
+  note    = {Numerical details of exp/log on SO(3); small-angle handling}
+}
+
+@techreport{diebel2006representing,
+  title       = {Representing attitude: Euler angles, unit quaternions, and rotation vectors},
+  author      = {Diebel, James},
+  institution = {Stanford University},
+  year        = {2006},
+  note        = {Comprehensive conversion formulae and convention tables between rotation representations}
+}
+
+@book{hanson2006visualizing,
+  title     = {Visualizing Quaternions},
+  author    = {Hanson, Andrew J.},
+  year      = {2006},
+  publisher = {Morgan Kaufmann},
+  note      = {Geometric intuition for quaternions and S^3}
+}
+
+@article{stuelpnagel1964parametrization,
+  title   = {On the parametrization of the three-dimensional rotation group},
+  author  = {Stuelpnagel, John},
+  journal = {SIAM Review},
+  volume  = {6},
+  number  = {4},
+  pages   = {422--430},
+  year    = {1964},
+  doi     = {10.1137/1006093},
+  note    = {Why no global three-parameter chart on SO(3) exists (topology) -- the case for 4-number quaternions}
+}
+
+@article{wu2005isb,
+  title   = {ISB recommendation on definitions of joint coordinate systems of various joints for the reporting of human joint motion---Part II: shoulder, elbow, wrist and hand},
+  author  = {Wu, Ge and van der Helm, Frans C. T. and Veeger, H. E. J. and others},
+  journal = {Journal of Biomechanics},
+  volume  = {38},
+  number  = {5},
+  pages   = {981--992},
+  year    = {2005},
+  doi     = {10.1016/j.jbiomech.2004.05.042},
+  note    = {Shoulder YXY Euler sequence and its gimbal-lock singularity (Section 17)}
+}
+
+@article{seth2018opensim,
+  title   = {OpenSim: Simulating musculoskeletal dynamics and neuromuscular control to study human and animal movement},
+  author  = {Seth, Ajay and Hicks, Jennifer L. and Uchida, Thomas K. and others},
+  journal = {PLoS Computational Biology},
+  volume  = {14},
+  number  = {7},
+  pages   = {e1006223},
+  year    = {2018},
+  doi     = {10.1371/journal.pcbi.1006223},
+  note    = {OpenSim 4 coordinate frames, joints and BallJoint (quaternion) parameterization (Section 18)}
+}
+
 % --- Software ---
 @article{virtanen2020scipy,
   title   = {{SciPy} 1.0: fundamental algorithms for scientific computing in {Python}},
