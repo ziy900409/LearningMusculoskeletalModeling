@@ -3,9 +3,10 @@
 > **範圍**：本檔為 Stage 1 的理論筆記。
 > **第一部分：古典力學與拉格朗日動力學**（§0–§10，對應
 > [`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb)）；
-> **第二部分：四元數與 $SO(3)$（3D 旋轉）**（見下方〈第二部分〉，對應
-> [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb)）。
-> 第三部分（Hamilton 相空間）待後續補上。
+> **第二部分：四元數與 $SO(3)$（3D 旋轉）**（§11–§20，對應
+> [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb)）；
+> **第三部分：Hamilton 力學與相空間**（§21–§32，對應
+> [`notebooks/03_hamiltonian_phase_space.ipynb`](notebooks/03_hamiltonian_phase_space.ipynb)）。
 >
 > 公式以 GitHub 原生 MathJax 撰寫（`$...$` 行內、`$$...$$` 展示）。
 
@@ -685,3 +686,380 @@ $E$ **奇異**（$\det E\to0$），一個自由度瞬間消失——這就是**�
 
 **延伸閱讀**：Hanson (2006) *Visualizing Quaternions*（幾何直觀）；Stuelpnagel (1964)
 旋轉群的參數化與拓撲（為何不存在無奇異的三參數全域座標——四元數之所以要 4 個數的根本原因）。
+
+<br>
+
+---
+---
+
+# 第三部分 · Hamilton 力學與相空間 (Hamiltonian Mechanics & Phase Space)
+
+> **範圍**：本部分為 Stage 1 第三部分的理論筆記，對應 notebook
+> [`notebooks/03_hamiltonian_phase_space.ipynb`](notebooks/03_hamiltonian_phase_space.ipynb) 與程式庫
+> [`src/hamiltonian_utils.py`](src/hamiltonian_utils.py)。**慣例**：相空間狀態堆疊為
+> $z=[q,\ p]$（呼應第一部分的 $[q,\dot q]$），角度沿用第一部分（自鉛垂線量起、垂懸為 $q=0$）。
+> 第一部分給了**二階**運動方程 $M\ddot q+C\dot q+g=\tau$；本部分把同一套力學改寫成**相空間
+> $(q,p)$ 上的一階流**，並收割兩個第一部分埋下的伏筆：**辛積分器**（§6.3 的「結構比階數更根本」）
+> 與**最佳控制的共態**（Stage 6/8 的 effort 最小化）。
+
+## 21. 為什麼要 Hamilton 形式？（Part 3 在路徑中的定位）
+
+Lagrangian 用位置與速度 $(q,\dot q)$ 描述系統，運動方程是二階的。Hamilton 形式改用位置與
+**共軛動量** $(q,p)$，把運動方程降成一階、且讓 $q$ 與 $p$ 地位對稱。對肌肉骨骼建模，這不是換湯不換
+藥的改寫，而是三件事的鑰匙：
+
+| 出現的地方 | Hamilton 形式扮演的角色 |
+|---|---|
+| Stage 4 / 8 數值積分 | **辛 / 變分積分器**（leapfrog、Simbody）長時間**不漏能量**——§6.3 伏筆的解答 |
+| Stage 6 靜態最佳化 | 肌肉冗餘的 KKT 條件即「$\tau$ 的 Hamilton 對偶」；共態＝關節力矩的影子價格 |
+| Stage 8 Moco 軌跡最佳化 | **Pontryagin 最小原理**：共態 $\lambda$ 滿足 $\dot\lambda=-\partial\mathcal H/\partial x$——與 $\dot p=-\partial H/\partial q$ **同構** |
+| 步態 / 節律動作分析 | **相圖 (phase portrait)** 是協調動力學的標準語言（極限環、吸引子、分岔） |
+
+一句話：**動量 $p$ 在力學裡是「運動量」，在最佳控制裡就是「共態／影子價格」**。看懂這個對應，
+Stage 6 的冗餘解與 Stage 8 的預測模擬就不再是黑盒最佳化，而是本章結構的直接延伸。
+
+---
+
+## 22. Legendre 變換：從 $L(q,\dot q)$ 到 $H(q,p)$
+
+### 22.1 共軛動量
+
+Euler–Lagrange 方程 $\frac{d}{dt}\frac{\partial L}{\partial\dot q_i}=\frac{\partial L}{\partial q_i}+\tau_i$
+中反覆出現的 $\partial L/\partial\dot q_i$ 本身就是一個基本量——**廣義（共軛）動量**：
+
+$$
+\boxed{\;p_i \equiv \frac{\partial L}{\partial \dot q_i}\;}\qquad\Longrightarrow\qquad p = M(q)\,\dot q .
+$$
+
+對機械系統，動能是速度的正定二次型 $T=\tfrac12\dot q^\top M(q)\dot q$，故 $p=\partial T/\partial\dot q=M(q)\dot q$：
+**質量矩陣把速度變成動量**。注意 $p$ 一般**不是** $m\dot q$——非對角的 $M_{12}$（§3.4 的慣性耦合）
+使某關節的動量也吃到另一關節的速度。這正是快速多關節動作裡「近端甩動供給遠端動量」的動量版敘述。
+
+### 22.2 Hamilton 量
+
+**Legendre 變換**把 $\dot q$ 換成 $p$，並定義 **Hamilton 量**
+
+$$
+\boxed{\;H(q,p)= p^\top\dot q - L(q,\dot q)\Big|_{\dot q=M^{-1}p}\;}
+= \tfrac12\,p^\top M(q)^{-1}p + V(q).
+$$
+
+對**時間無關約束（scleronomic）＋速度無關位能**的系統，$H$ **恰為總機械能** $T+V$——只是現在用
+動量 $p$ 而非速度 $\dot q$ 表達（$T=\tfrac12 p^\top M^{-1}p$）。Legendre 變換可逆的條件是
+$\partial^2 L/\partial\dot q^2=M$ 正定——**與正向動力學良置是同一個條件**。實作上
+`conjugate_momentum`（$p=M\dot q$）與 `velocity_from_momentum`（$\dot q=M^{-1}p$）互為反函數，
+`hamiltonian` 驗證 $H=T+V$ 逐點成立（`tests/` 中誤差 $=0$）。
+
+> **幾何直觀**：Legendre 變換是凸對偶——把「切線斜率」$p$ 當新座標，用**支撐超平面**重編碼曲面
+> $L(\dot q)$。同一招在熱力學（內能↔焓、$U\leftrightarrow H$）、最佳化（原問題↔對偶）反覆出現；
+> 這裡的 $H$ 之於 $L$，正如焓之於內能。
+
+---
+
+## 23. Hamilton 正則方程與相空間
+
+把 $H$ 的全微分 $dH=\dot q^\top dp+p^\top d\dot q-\frac{\partial L}{\partial q}dq-\frac{\partial L}{\partial\dot q}d\dot q$
+中的 $p=\partial L/\partial\dot q$ 抵消 $d\dot q$ 項，並用 Euler–Lagrange $\dot p=\partial L/\partial q+\tau$，得
+**Hamilton 正則方程**：
+
+$$
+\boxed{\;\dot q=\frac{\partial H}{\partial p},\qquad \dot p=-\frac{\partial H}{\partial q}+\tau\;}
+$$
+
+一條 $n$ 維二階方程被拆成 $2n$ 維一階方程；$q,p$ 完全對稱。對我們的連桿鏈，展開即
+
+$$
+\dot q = M(q)^{-1}p,\qquad
+\dot p = \underbrace{-\frac{\partial H}{\partial q}}_{\;=\;\tfrac12\dot q^\top(\partial M/\partial q)\dot q-g}+\ \tau .
+$$
+
+**關鍵實作技巧（複用第一部分）**：$-\partial H/\partial q$ 看似要新算 $\partial M/\partial q$，但用
+§3.5 的反對稱恆等式 $\dot M=C+C^\top$ 可**直接借用**既有的 Coriolis 矩陣與重力項：
+
+$$
+\dot p=\dot M\dot q+M\ddot q=(C+C^\top)\dot q+(\tau-C\dot q-g)
+=\boxed{\;C(q,\dot q)^\top\dot q-g(q)+\tau\;}.
+$$
+
+於是 `hamilton_state_derivative` 不必重推符號，只呼叫 `chain.coriolis`、`chain.gravity` 即可，
+且**與 Lagrangian 形式積出完全相同的軌跡**（`tests/` 中混沌雙擺 8 秒兩式軌跡差 $<10^{-6}$，
+notebook 量得 $\sim10^{-8}$）。這是「同一套物理、兩種座標」最乾淨的數值印證，也複用了單一份推導。
+
+> **狀態維度的體會**：Lagrangian 的狀態是 $(q,\dot q)$、Hamilton 的是 $(q,p)$，維度都是 $2n$。
+> 差別在**幾何**：$p$ 生活在**餘切空間 $T^*_qQ$**（線性泛函），在座標變換下按 $\partial q/\partial q'$
+> 的**逆轉置**變換，這使相空間 $(q,p)$ 帶有下一節到 §27 的辛結構——$(q,\dot q)$ 沒有。
+
+---
+
+## 24. 相空間、相流與單擺分相圖
+
+把狀態 $z=(q,p)\in\mathbb R^{2n}$ 看成一個點，正則方程定義一個**相流 (phase flow)**
+$\varphi_t:z(0)\mapsto z(t)$。對**自守（時間無關）$H$**，能量守恆 $H(z(t))=E$：**軌道被鎖在能量等位面
+$\{H=E\}$ 上**。這把「解微分方程」變成「在相空間看幾何」——相圖 (phase portrait) 就是這套幾何語言。
+
+**1 自由度單擺**是最小的活例子（`pendulum_field`）：$H(\theta,p)=\dfrac{p^2}{2mL^2}+mgL(1-\cos\theta)$。
+它的相圖（圖 11）有三種軌道：
+
+- **擺動 (libration)**：能量低於翻越所需（$E<2mgL$），軌道是繞平衡點 $(\theta,p)=(0,0)$ 的**閉曲線**
+  ——擺來擺去。
+- **翻轉 (rotation)**：能量高（$E>2mgL$），$\theta$ 單調增（或減），軌道是**開放**波浪線——繞過頂端。
+- **分界線 (separatrix)**：恰 $E=2mgL$ 的臨界軌道，通向不穩定平衡點 $(\pm\pi,0)$（倒立）。它把擺動與
+  翻轉隔開，是**混沌的溫床**——一切「近乎倒立」的敏感性都發生在它附近。
+
+![單擺相圖：閉合的擺動軌道（內）、開放的翻轉軌道（外），與分隔兩者、通過倒立不穩定點的分界線。等高線即 $H=E$ 的能量等位面。](figures/11_pendulum_phase_portrait.png)
+
+> **生物力學連結**：相圖是**協調動力學 (coordination dynamics)** 的通用語言——關節角 vs 角速度的
+> 軌線、節律動作（步態、划船、呼吸）的**極限環 (limit cycle)**、雙側協調的相位關係（HKB 模型）都畫在
+> 相平面上。要強調的是：純 Hamilton 系統**守恆、無吸引子**（見 §27 Liouville），真正的極限環需要
+> 「耗散＋驅動」（肌肉做功抵抗阻尼）——那是本 Stage 之後的主題，但**畫布**就是這裡的相空間。
+
+多自由度時整條軌道活在高維 $\{H=E\}$ 上，難以直接畫。標準工具是 **Poincaré 截面**：每次軌道穿過某超
+平面（如 $q_1=0$ 且 $\dot q_1>0$）就記一點。規則（可積）運動落在光滑曲線上，混沌運動則散成一片
+（圖 14）——這是 §7 雙擺混沌在相空間中的結構化面貌。
+
+![雙擺在固定能量面上的 Poincaré 截面：低能量時軌道落在規則的閉曲線（KAM 環），能量升高後湧現散開的混沌海——§7 決定性混沌的相空間指紋。](figures/14_poincare_section.png)
+
+---
+
+## 25. 守恆量：循環座標、Noether 與角動量
+
+Hamilton 形式讓守恆律一目了然。若 $H$ **不顯含某個座標** $q_i$（稱 $q_i$ 為**循環／可略座標
+(cyclic coordinate)**），則正則方程直接給
+
+$$
+\frac{\partial H}{\partial q_i}=0\ \Longrightarrow\ \dot p_i=0\ \Longrightarrow\ p_i=\text{const}.
+$$
+
+**對稱 $\to$ 守恆**，這正是 **Noether 定理**的 Hamilton 版縮影：
+
+| 對稱（$H$ 不變於…） | 守恆量 |
+|---|---|
+| 時間平移（$\partial H/\partial t=0$） | 能量 $H$ |
+| 空間平移（某方向） | 線動量 |
+| 旋轉（繞某軸） | 角動量 |
+
+**生物力學上最重要的個案是角動量守恆**：第一部分 §8 已預告——人體在**飛行期**（跳躍、空翻、投擲騰
+空）是**自由漂浮基座**，離地後無外部力矩，於是繞質心的**全身角動量守恆**。用 Hamilton 語言說，飛行期
+的**整體姿態座標是循環的**，其共軛動量（角動量）守恆——這就是體操「貓翻身」能改變朝向卻不改變總角動量
+的守恆律根據，也是 Stage 2 浮動基座動力學的守恆量檢驗。（本章釘住基座的擺**有**重力力矩，故能量守恆但
+角動量不守恆——恰好互補地示範了兩種守恆律的成立條件。）
+
+---
+
+## 26. Poisson 括號：動力學的代數骨架
+
+任取兩個相空間函數 $f(q,p),g(q,p)$，定義 **Poisson 括號**
+
+$$
+\boxed{\;\{f,g\}=\sum_i\left(\frac{\partial f}{\partial q_i}\frac{\partial g}{\partial p_i}
+-\frac{\partial f}{\partial p_i}\frac{\partial g}{\partial q_i}\right)\;}
+$$
+
+它把整個 Hamilton 動力學濃縮成一條式子——**任何觀測量的時間演化**都是它與 $H$ 的括號：
+
+$$
+\boxed{\;\frac{df}{dt}=\{f,H\}+\frac{\partial f}{\partial t}\;}
+$$
+
+由此：$\dot q_i=\{q_i,H\}=\partial H/\partial p_i$、$\dot p_i=\{p_i,H\}=-\partial H/\partial q_i$
+（正則方程只是 $f=q_i,p_i$ 的特例，`tests/` 逐點驗證），而
+
+$$
+\{f,H\}=0\ \Longleftrightarrow\ f\ \text{是守恆量}.
+$$
+
+於是能量守恆就是 $\{H,H\}=0$（恆真）、§25 的循環座標動量守恆就是 $\{p_i,H\}=0$。相空間的骨架則是
+**正則對易關係**
+
+$$
+\{q_i,q_j\}=0,\qquad \{p_i,p_j\}=0,\qquad \{q_i,p_j\}=\delta_{ij}.
+$$
+
+`poisson_bracket`（數值中央差分）逐點確認以上全部。Poisson 括號還是通往兩個更深主題的門：它在
+**量子化**時變成對易子 $\frac1{i\hbar}[\hat f,\hat g]$；在幾何上它由下一節的**辛 2-形式**唯一決定
+——這是把「守恆」與「體積不變」綁在一起的代數。
+
+---
+
+## 27. 辛結構與 Liouville 定理
+
+相空間帶有一個典範的**辛 2-形式 (symplectic form)**
+
+$$
+\omega=\sum_i dq_i\wedge dp_i .
+$$
+
+**Hamilton 相流保持 $\omega$**（是一個 *symplectomorphism*）——這是比能量守恆更根本的結構性質。它的直接
+推論是 **Liouville 定理**：
+
+$$
+\boxed{\;\text{相空間體積沿 Hamilton 相流守恆}\;}\qquad(\nabla\!\cdot v_H=0),
+$$
+
+因為 Hamilton 向量場 $v_H=(\partial H/\partial p,\,-\partial H/\partial q)$ 的散度
+$\sum_i(\partial^2H/\partial q_i\partial p_i-\partial^2H/\partial p_i\partial q_i)=0$。用一團初始條件
+（相空間裡的一小塊「墨滴」）演化，**它的體積不變**（形狀可以被拉得極細長，但體積守恆，圖 13）。
+
+兩個影響深遠的推論：
+
+- **保守系統沒有吸引子**。Hamilton 流不能把體積壓縮到一點或一條線，所以純力學系統**不存在**穩定不動點/
+  極限環的吸引域。真實的步態極限環之所以存在，正因為它**不是**純 Hamilton 的——肌肉主動注入能量、關節
+  被動耗散能量，兩者平衡才生出吸引子。分清「守恆的骨架」與「耗散/驅動的修正」是理解運動控制穩定性的前提。
+- **積分器該保持的結構**：一個好的長時間積分器**應該也保持 $\omega$（保相體積）**。這把我們帶回第一部分
+  §6.3 的伏筆——下一節揭曉。
+
+![Liouville 定理：相空間中一團初始條件（藍色圓）沿單擺相流演化，被剪切拉伸成細長的絲帶，但其面積（相體積）保持不變。辛積分器逐格保住此面積；forward Euler 則讓面積系統性膨脹。](figures/13_liouville_area.png)
+
+---
+
+## 28. 辛積分器與變分積分器（回答 §6.3 的伏筆）
+
+第一部分 §6.3 說「**結構比階數更根本**：非辛的 Runge–Kutta 無論階數多高，長時間都有單向累積的能量漂移
+(secular drift)」。本節給出結構的定義與解方。一個數值步進 $z_{k+1}=\Phi_{\Delta t}(z_k)$ 稱為**辛的**，
+若它保持 $\omega$（等價於其 Jacobian 滿足 $D\Phi^\top J D\Phi=J$，行列式恆為 $1$、保相體積）。
+
+**辛 Euler（半隱式 Euler）**——最簡單的辛法。對可分離的 $H=\tfrac12 p^\top W p+V(q)$：
+
+$$
+p_{k+1}=p_k+\Delta t\,F(q_k),\qquad q_{k+1}=q_k+\Delta t\,W p_{k+1}
+\quad(F=-\partial V/\partial q).
+$$
+
+**關鍵是那一步交錯**：$q$ 用**更新後**的 $p_{k+1}$ 推進。這一個小改動就讓 Jacobian 行列式**恰為 1**
+（`tests/` 對諧振子解析驗證），故保相體積、只有一階精度卻**能量有界不漂移**。
+
+**Störmer–Verlet／leapfrog（蛙跳）**——分子動力學的主力，二階、辛、且**時間可逆**：
+
+$$
+p_{k+1/2}=p_k+\tfrac{\Delta t}{2}F(q_k),\quad
+q_{k+1}=q_k+\Delta t\,W p_{k+1/2},\quad
+p_{k+1}=p_{k+1/2}+\tfrac{\Delta t}{2}F(q_{k+1}).
+$$
+
+**為何辛法不漏能量？——「影子 Hamilton 量」**。反向誤差分析 (backward error analysis) 證明：辛積分器
+不是近似解原系統，而是**幾乎精確地解一個鄰近的「影子」Hamilton 量** $\tilde H=H+\Delta t^k H_1+\cdots$。
+由於它精確守恆 $\tilde H$，而 $\tilde H$ 與真 $H$ 相差 $O(\Delta t^k)$，能量誤差便**在有界帶內振盪、
+永不單向漂移**。非辛法（forward Euler、RK4）沒有這樣的守恆影子量，誤差就隨時間線性累積。
+
+**數值對照**（單擺，$\theta_0=150°$、$\Delta t=0.02$、積分 60 秒，圖 12）——能量相對峰對峰漂移：
+
+| 積分器 | 結構 | 階數 | 能量漂移（60 s） |
+|---|---|---|---|
+| **leapfrog / Verlet** | 辛 | 2 | $\sim0.08\%$（有界振盪） |
+| **辛 Euler** | 辛 | 1 | $\sim4.8\%$（有界振盪） |
+| **RK4** | 非辛 | 4 | $\sim10^{-4}\%$（精準，但長時**緩慢單向漂移**） |
+| **forward Euler** | 非辛 | 1 | $>70\%$（能量系統性暴衝） |
+
+寓意：**leapfrog 只有二階卻遠比四階 RK4 適合長時間保守模擬**；RK4 短期最準，但把時間拉長，非辛的
+secular drift 終究會贏。挑積分器先看**結構（辛？可逆？誤差受控？）**，再看階數——這就是 §6.3 的完整解答。
+
+![辛 vs 非辛積分器的長時間能量：leapfrog 與辛 Euler 的能量在有界帶內振盪；forward Euler 系統性暴衝，RK4 雖精準卻仍緩慢單向漂移。橫軸時間、縱軸總能量。](figures/12_symplectic_energy.png)
+
+> **變分積分器與生物力學連結**。把**離散**的 Hamilton 原理（對離散作用量取駐值）直接推導出的步進，稱為
+> **變分積分器**——它們自動是辛的、且離散地滿足 Noether 守恆。這正是 Stage 8 **Moco 直接配置
+> (direct collocation)** 保結構的根據，也是 OpenSim **Simbody** 採誤差受控積分、以及長時程預測模擬能保住
+> 能量預算的原因。肌肉模型的數值剛性（§6.3、Yeo 2023）之上再加一層「保結構」，才是可信長時模擬的雙保險。
+
+---
+
+## 29. Hamilton 形式與最佳控制：共態就是動量（前瞻 Stage 6/8）
+
+本章最實用的收穫，是它與**最佳控制**的同構——這是 Stage 6（肌肉冗餘）與 Stage 8（Moco 預測模擬）的
+數學骨架。給定動力學 $\dot x=f(x,u)$（$x=(q,p)$ 或 $(q,\dot q)$，$u$ 為肌肉激發）與欲最小化的成本
+$J=\int_0^T \ell(x,u)\,dt$（如 effort $\sum a_i^2$），**Pontryagin 最小原理**引入**共態／伴隨變數
+(costate/adjoint)** $\lambda(t)$ 並定義**控制 Hamilton 量**
+
+$$
+\mathcal H(x,u,\lambda)=\ell(x,u)+\lambda^\top f(x,u),
+$$
+
+則最佳解必滿足
+
+$$
+\dot x=\frac{\partial\mathcal H}{\partial\lambda},\qquad
+\boxed{\;\dot\lambda=-\frac{\partial\mathcal H}{\partial x}\;},\qquad
+u^\star=\arg\min_u\mathcal H .
+$$
+
+請比對 §23：**共態方程 $\dot\lambda=-\partial\mathcal H/\partial x$ 與正則方程
+$\dot p=-\partial H/\partial q$ 完全同構**。這不是巧合——當成本只有終端項時，共態 $\lambda$ 退化成
+力學動量 $p$。**力學裡的「動量」，在最佳控制裡就是「共態／影子價格」**：它衡量「在狀態 $x$ 上多放一點點
+成本敏感度」。
+
+生物力學意涵：
+
+- **Stage 6 肌肉冗餘**（$\tau=R(q)F$、$F\ge0$、$\min\sum a_i^2$）的 KKT 乘子，正是關節力矩約束的影子
+  價格——「這個 $\tau$ 值多少 effort」。它是本章對偶結構在**靜態**一瞬間的版本。
+- **Stage 8 Moco 預測模擬**把上式在時間上離散（direct collocation），共態 $\lambda(t)$ 隨軌跡演化；
+  §28 的變分/辛結構保證這套離散化不會偽造能量或動量。
+- **神經控制的詮釋**：中樞神經選肌力，數學上就是在每一刻 $\min_u\mathcal H$——effort 與任務誤差的權衡。
+  這給了「動作是被最佳化出來的」一個可計算的骨架。
+
+> **一句話**：第三部分把力學寫成相空間上的辛流（§22–§27），教會積分器如何長期忠實（§28），並揭示同一套
+> Hamilton 結構就是 Stage 6/8 最佳控制的骨架（§29）。動量、能量、辛結構、共態——是同一件事的四張臉。
+
+---
+
+## 30. 生物力學連結與前瞻
+
+- **相圖是協調動力學的畫布**：關節角–角速度軌線、節律動作的極限環、雙側相位耦合（HKB）都在相平面上讀。
+  但**極限環 $\ne$ Hamilton 軌道**——它需要主動注入＋被動耗散的能量平衡（§24、§27）。
+- **守恆律作為模型檢驗**：釘住基座 $\to$ 能量守恆；自由漂浮基座（飛行期）$\to$ 角動量守恆（§25）。
+  兩者都是**與程式無關**的正確性指標，延續第一部分「先驗證再相信」的精神（Hicks 2015）。
+- **辛/變分積分器 $\to$ Stage 4/8**：長時程正向模擬、Moco 直接配置要能保能量預算，靠的就是 §28 的保結構
+  積分（Simbody、變分積分器）。肌肉模型的數值剛性之外，再加保結構這層。
+- **Hamilton 對偶 $\to$ Stage 6/8**：肌肉冗餘與預測模擬本質是最佳控制；共態＝動量＝影子價格（§29）。
+- **$\to$ 幾何力學（Stage 2 之後）**：把 $q$ 換成 $SO(3)/SE(3)$（第二部分）上的位形，Hamilton 形式推廣成
+  **李–Poisson 系統**，剛體歐拉方程即其特例——這是浮動基座多體動力學的現代幾何語言。
+
+> **三部曲總結**：第一部分給了「怎麼動」（$M\ddot q+C\dot q+g=\tau$）、第二部分給了「怎麼轉」
+> （$SO(3)$、四元數、$\dot q=\tfrac12q\otimes\omega$）、第三部分給了「動的深層結構」（相空間、辛、守恆、
+> 共態）。三者相加，就是描述並可信地模擬 3D 肌肉骨骼系統所需的完整古典力學語言，並直通後續各 Stage。
+
+---
+
+## 31. 名詞對照 (Glossary · Part 3)
+
+| 中文 | English | 符號 |
+|---|---|---|
+| 共軛（廣義）動量 | conjugate / generalized momentum | $p=\partial L/\partial\dot q$ |
+| Legendre 變換 | Legendre transform | $L\leftrightarrow H$ |
+| Hamilton 量 | Hamiltonian | $H(q,p)=T+V$ |
+| 正則方程 | canonical (Hamilton's) equations | $\dot q=\partial H/\partial p,\ \dot p=-\partial H/\partial q$ |
+| 相空間 / 相流 | phase space / phase flow | $(q,p),\ \varphi_t$ |
+| 相圖 | phase portrait | — |
+| 分界線 | separatrix | — |
+| 循環（可略）座標 | cyclic / ignorable coordinate | $q_i$（$\partial H/\partial q_i=0$） |
+| Noether 定理 | Noether's theorem | 對稱 $\to$ 守恆 |
+| Poisson 括號 | Poisson bracket | $\{f,g\}$ |
+| 辛 2-形式 / 辛結構 | symplectic form / structure | $\omega=\sum dq_i\wedge dp_i$ |
+| Liouville 定理 | Liouville's theorem | $\nabla\!\cdot v_H=0$ |
+| 辛積分器 | symplectic integrator | 辛 Euler、leapfrog |
+| Störmer–Verlet / 蛙跳 | Störmer–Verlet / leapfrog | — |
+| 影子 Hamilton 量 | shadow / modified Hamiltonian | $\tilde H$ |
+| 世俗漂移 | secular drift | — |
+| Poincaré 截面 | Poincaré section | — |
+| 共態 / 伴隨變數 | costate / adjoint | $\lambda$ |
+| Pontryagin 最小原理 | Pontryagin's minimum principle | $\mathcal H=\ell+\lambda^\top f$ |
+
+---
+
+## 32. 參考文獻 (Part 3)
+
+見 [`refs.bib`](refs.bib)。核心：
+
+- **Goldstein, Poole & Safko** *Classical Mechanics*, Ch. 8（Hamilton 方程）、Ch. 9（正則變換、Poisson 括號）
+  — §22–§26 的標準出處。
+- **Arnold (1989)** *Mathematical Methods of Classical Mechanics* — 辛幾何、Liouville 定理、相空間的權威幾何
+  處理（§23 餘切空間、§27）。
+- **Hairer, Lubich & Wanner (2006)** *Geometric Numerical Integration* — 辛/變分積分器、反向誤差分析與「影子
+  Hamilton 量」的決定性參考（§28）。
+- **Marsden & West (2001)** *Discrete mechanics and variational integrators*, *Acta Numerica* — 變分積分器由離散
+  Hamilton 原理推導、離散 Noether（§28 → Stage 8 Moco）。
+- **Betts (2010)** *Practical Methods for Optimal Control … Nonlinear Programming* — 直接配置與 Pontryagin 原理的
+  工程實作（§29 → Stage 8）。
+- **Liberzon (2011)** *Calculus of Variations and Optimal Control Theory* — Pontryagin 最小原理與共態方程的清楚推導
+  （§29）。
+- **Featherstone (2008)** *Rigid Body Dynamics Algorithms* — 空間代數；§30 幾何力學 → Stage 2。
+- **Uchida & Delp (2021)** *Biomechanics of Movement*, Ch. 6–7 與 Moco — §28–§30 生物力學連結。
+- **Hicks et al. (2015)** 模擬驗證最佳實務 — §30「守恆律作為檢驗」的原始出處（延續第一部分）。
