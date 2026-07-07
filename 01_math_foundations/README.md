@@ -27,7 +27,7 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 |---|---|---|---|
 | **第一部分** | 古典力學與拉格朗日動力學（雙擺） | [`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb) | ✅ 完成 |
 | **第二部分** | 四元數與 $SO(3)$（3D 旋轉） | [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb) | ✅ 完成 |
-| 第三部分 | Hamilton 力學與相空間 | `notebooks/03_hamiltonian_phase_space.ipynb` | ⬜ 待做 |
+| **第三部分** | Hamilton 力學與相空間（辛流、Liouville、共態） | [`notebooks/03_hamiltonian_phase_space.ipynb`](notebooks/03_hamiltonian_phase_space.ipynb) | ✅ 完成 |
 
 ## 第一部分內容（已完成）
 
@@ -66,19 +66,45 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 球窩關節（肩、髖）＝ 3 自由度旋轉；ISB 歐拉角僅為報告用座標（萬向鎖！），分析與內插回到四元數；
 IMU 姿態估計＝ $\dot q=\tfrac12 q\otimes\omega$ 加範數約束。→ Stage 2（$SE(3)$、旋量）、Stage 3（OpenSim `BallJoint`）。
 
+## 第三部分內容（已完成）
+
+- **理論筆記**：[`notes.md`](notes.md) §21–§32 — Legendre 變換與共軛動量、Hamilton 正則方程與相空間、
+  單擺分相圖（擺動／翻轉／分界線）、循環座標與 Noether／角動量守恆、**Poisson 括號**、
+  **辛結構與 Liouville 定理**、**辛／變分積分器**（回答 §6.3「結構比階數更根本」）、
+  **Hamilton 形式與最佳控制**（Pontryagin、共態＝動量→Stage 6/8）。
+- **Notebook**：[`notebooks/03_hamiltonian_phase_space.ipynb`](notebooks/03_hamiltonian_phase_space.ipynb)
+  — SymPy Legendre 變換、Hamilton↔Lagrange 軌跡等價、單擺相圖、辛 vs 非辛積分器能量、
+  Liouville 相體積、雙擺 Poincaré 截面、Poisson 括號生成正則方程。（已完整執行，含輸出與圖 11–14）
+- **程式庫**：[`src/hamiltonian_utils.py`](src/hamiltonian_utils.py) — 共軛動量與逆 Legendre 變換、
+  Hamilton 量、正則方程 RHS（複用 $\dot M=C+C^\top$ 借既有 $C,g$）、Poisson 括號、
+  可分離 Hamilton 量的辛積分器（辛 Euler、leapfrog）與非辛對照（forward Euler、RK4）。
+- **測試**：[`tests/test_hamiltonian_utils.py`](tests/test_hamiltonian_utils.py) — 19 條回歸測試，
+  逐點檢驗 Legendre 互逆、$H=T+V$、Hamilton↔Lagrange 等價、$-\partial H/\partial q$ 一致、
+  正則對易 $\{q_i,p_j\}=\delta_{ij}$、辛映射保面積（行列式 $=1$）、辛法能量有界 vs forward Euler 世俗漂移、
+  leapfrog 二階與時間可逆。
+- **圖**：[`figures/`](figures/) 11–14 — 由 notebook 產生。
+
+### 生物力學連結（Part 3）
+相圖＝協調動力學的畫布（極限環需耗散＋驅動，非純 Hamilton）；釘住基座→能量守恆、飛行期浮動基座→
+角動量守恆（皆為與程式無關的模型檢驗）；辛／變分積分器＝長時程模擬保能量預算（Simbody、Moco）；
+**共態＝動量＝影子價格**＝肌肉冗餘與預測模擬的最佳控制骨架。→ Stage 4/8（積分器、Moco）、Stage 6（冗餘）。
+
 ## 如何執行
 
 ```bash
 # 相依套件：numpy scipy sympy matplotlib jupyter nbconvert
 python src/dynamics_utils.py                 # 第一部分自我測試（雙擺能量守恆）
 python src/rotations_utils.py                # 第二部分自我測試（旋轉 round-trip、雙重覆蓋、同態）
-python -m pytest                             # 全部回歸測試（第一 + 第二部分）
+python src/hamiltonian_utils.py              # 第三部分自我測試（Hamilton==Lagrange、辛積分器能量）
+python -m pytest                             # 全部回歸測試（第一 + 第二 + 第三部分）
 
 # 重新執行 notebook（會重建 figures/）
 jupyter nbconvert --to notebook --execute --inplace \
     notebooks/01_lagrangian_double_pendulum.ipynb
 jupyter nbconvert --to notebook --execute --inplace \
     notebooks/02_quaternions_so3.ipynb
+jupyter nbconvert --to notebook --execute --inplace \
+    notebooks/03_hamiltonian_phase_space.ipynb
 ```
 
 ## Stage 1 里程碑
@@ -87,6 +113,10 @@ jupyter nbconvert --to notebook --execute --inplace \
 >
 > **第二部分**：三語互轉 round-trip 誤差 $<10^{-9}$；四元數積分 12 秒 $\|q\|$ 偏離 1 $<10^{-5}$、
 > 由 $\dot q$ 反推角速度誤差 $<10^{-2}$ rad/s，已通過（並與 SciPy 交叉驗證）。
+>
+> **第三部分**：Legendre 互逆與 $H=T+V$ 誤差 $=0$；Hamilton 與 Lagrange 軌跡 12 秒差 $\sim10^{-7}$；
+> leapfrog 60 秒能量漂移 $\sim0.08\%$（有界、無世俗漂移）、forward Euler $>70\%$（暴衝）；
+> Liouville 相面積守恆到 5 位有效數字，已通過。
 
 ## 參考
 見 [`refs.bib`](refs.bib)。
