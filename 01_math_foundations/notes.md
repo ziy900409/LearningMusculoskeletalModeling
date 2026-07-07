@@ -1,8 +1,11 @@
 # Stage 1 · 數學基礎 — 筆記 (Math Foundations)
 
-> **範圍**：本檔為 Stage 1 的理論筆記，涵蓋**第一部分：古典力學與拉格朗日動力學**。
-> 對應 notebook：[`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb)。
-> 第二、三部分（四元數 / $SO(3)$、Hamilton 相空間）待後續補上。
+> **範圍**：本檔為 Stage 1 的理論筆記。
+> **第一部分：古典力學與拉格朗日動力學**（§0–§10，對應
+> [`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb)）；
+> **第二部分：四元數與 $SO(3)$（3D 旋轉）**（見下方〈第二部分〉，對應
+> [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb)）。
+> 第三部分（Hamilton 相空間）待後續補上。
 >
 > 公式以 GitHub 原生 MathJax 撰寫（`$...$` 行內、`$$...$$` 展示）。
 
@@ -415,3 +418,270 @@ $$
 
 **延伸閱讀**：Lynch & Park (2017) *Modern Robotics*（旋量、指數積公式，Stage 2 的另一路徑）；
 Zhang & Fan (2015) *Computational Biomechanics of the Musculoskeletal System*（有限元與組織力學）。
+
+<br>
+
+---
+---
+
+# 第二部分 · 四元數與 $SO(3)$（3D 旋轉）
+
+> **範圍**：本部分為 Stage 1 第二部分的理論筆記，對應 notebook
+> [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb) 與程式庫
+> [`src/rotations_utils.py`](src/rotations_utils.py)。**慣例**：四元數採**純量在前**
+> $q=[w,x,y,z]$、**Hamilton** 乘法、**主動 (active)** 旋轉；旋轉向量／角速度為 $\mathbb R^3$
+> 中的普通向量（弧度）。
+
+## 11. 為什麼需要 3D 旋轉的專門語言？（Part 2 在路徑中的定位）
+
+第一部分把肢段當作**平面**連桿，關節角是純量。但真實骨骼在 3D 中旋轉：
+
+| 出現的地方 | 3D 旋轉扮演的角色 |
+|---|---|
+| Stage 2 空間代數 | 剛體位姿 $SE(3)=SO(3)\ltimes\mathbb R^3$；角速度＋線速度合成 6 維旋量 |
+| Stage 3 OpenSim 運動學 | 每個 body 座標系經一個旋轉接父座標系；`BallJoint` 以四元數參數化 |
+| Stage 3/5 動作捕捉、IMU | 標記點姿態、陀螺儀 $\boldsymbol\omega$ → 姿態估計 |
+| Stage 8 Moco | 以四元數或指數座標為姿態狀態變數，避開歐拉角奇異 |
+
+一個 3D 旋轉可用**三種等價語言**描述——旋轉矩陣 $R\in SO(3)$、單位四元數 $q\in S^3$、
+旋轉向量 $\theta\hat n\in so(3)$。本部分建立這三者與它們的映射，並說明**為什麼四元數是
+姿態的首選狀態**（無萬向鎖、儲存省、正規化易、內插好）。
+
+| 表示 | 參數數 | 優點 | 缺點 |
+|---|---|---|---|
+| 旋轉矩陣 $R$ | 9（6 約束） | 直接作用於向量、可組合 | 冗餘、需維持正交性 |
+| 歐拉角 $(\alpha,\beta,\gamma)$ | 3 | 直覺、ISB 關節角定義 | **萬向鎖**、內插/積分差 |
+| 軸-角 / 旋轉向量 $\theta\hat n$ | 3 | 幾何最清楚（$so(3)$） | 組合不便、$\theta=\pi$ 奇異 |
+| **單位四元數** $q$ | 4（1 約束） | **無萬向鎖**、組合便宜、易正規化、SLERP | 雙重覆蓋 $q\sim-q$ |
+
+---
+
+## 12. $SO(3)$ 與 $so(3)$：旋轉群及其指數映射
+
+### 12.1 旋轉群 $SO(3)$
+
+$$SO(3)=\{R\in\mathbb R^{3\times3}: R^\top R=I,\ \det R=+1\}.$$
+
+$R^\top R=I$（正交）保長度與角度；$\det R=+1$ 排除鏡射。它是 3 維**李群**——既是群、
+又是光滑流形。旋轉不可交換（$R_1R_2\ne R_2R_1$），這是 3D 姿態一切困難的根源。
+
+### 12.2 李代數 $so(3)$：無窮小旋轉即反對稱矩陣
+
+沿 $R(t)=\exp(tK)$（$R(0)=I$）對 $R^\top R=I$ 微分並代 $t=0$，得 $K^\top+K=0$：
+**切空間 $so(3)$ 是反對稱矩陣的集合**。任一反對稱矩陣可由一向量 $\boldsymbol\omega$ 生成
+（**hat 映射**），且它的作用恰為外積：
+
+$$
+[\boldsymbol\omega]_\times=\begin{bmatrix}0&-\omega_3&\omega_2\\ \omega_3&0&-\omega_1\\ -\omega_2&\omega_1&0\end{bmatrix},
+\qquad [\boldsymbol\omega]_\times\,v=\boldsymbol\omega\times v .
+$$
+
+於是 $so(3)\cong\mathbb R^3$：**一個角速度向量就是一個無窮小旋轉**（`hat`/`vee`）。
+
+### 12.3 指數映射與 Rodrigues 公式
+
+$\exp:so(3)\to SO(3)$ 把旋轉向量 $\boldsymbol\omega=\theta\hat n$（繞 $\hat n$ 轉 $\theta$）映成矩陣。
+利用 $[\hat n]_\times^3=-[\hat n]_\times$，指數級數收斂成閉式 **Rodrigues 公式**：
+
+$$
+\boxed{\;R=\exp([\boldsymbol\omega]_\times)=I+\frac{\sin\theta}{\theta}[\boldsymbol\omega]_\times+\frac{1-\cos\theta}{\theta^2}[\boldsymbol\omega]_\times^2\;}\qquad(\theta=\|\boldsymbol\omega\|).
+$$
+
+反向的 **log map** 從 $R$ 取回 $\theta\hat n$：
+
+$$\theta=\arccos\frac{\operatorname{tr}R-1}{2},\qquad [\hat n]_\times=\frac{R-R^\top}{2\sin\theta}.$$
+
+實作（`exp_so3`/`log_so3`）在 $\theta\to0$ 用泰勒展開避免除零，在 $\theta\to\pi$
+（$\sin\theta\to0$）從 $R+I$ 的對角取軸——這兩個奇異點是旋轉向量表示的固有代價，
+也是四元數（半角、無此奇異）勝出的地方。
+
+> **生物力學／控制連結**：$[\boldsymbol\omega]_\times$ 就是剛體運動學的角速度算子，Stage 2 會用到
+> $\dot R=[\boldsymbol\omega_s]_\times R$（空間座標）與 $\dot R=R[\boldsymbol\omega_b]_\times$（體座標）。
+> 指數映射是**旋轉版的等速運動**：固定 $\boldsymbol\omega$ 積分出的姿態沿 $SO(3)$ 的**測地線**前進
+> （§16、圖 09）。
+
+---
+
+## 13. 四元數代數與雙重覆蓋
+
+### 13.1 Hamilton 積
+
+四元數 $q=w+xi+yj+zk$，基元滿足 $i^2=j^2=k^2=ijk=-1$（故 $ij=k,\,jk=i,\,ki=j$，
+**不可交換**）。以純量-向量對 $q=(w,\mathbf v)$ 表示，乘法為
+
+$$q_1\otimes q_2=\big(w_1w_2-\mathbf v_1\!\cdot\!\mathbf v_2,\ \ w_1\mathbf v_2+w_2\mathbf v_1+\mathbf v_1\times\mathbf v_2\big).$$
+
+共軛 $q^{*}=(w,-\mathbf v)$、範數 $\|q\|^2=q\otimes q^{*}=w^2+x^2+y^2+z^2$、
+單位四元數的逆即共軛 $q^{-1}=q^{*}$（`quat_multiply`/`quat_conjugate`/`quat_inverse`）。
+
+### 13.2 單位四元數表示旋轉（半角）
+
+單位四元數 $\|q\|=1$ 構成 3 維球面 $S^3$，是一個群（$\cong SU(2)$）。繞單位軸 $\hat n$
+轉 $\theta$ 的旋轉對應
+
+$$\boxed{\;q=\Big(\cos\tfrac\theta2,\ \sin\tfrac\theta2\,\hat n\Big)\;}$$
+
+——注意是**半角** $\theta/2$。旋轉向量 $\mathbf p$：把它當純四元數 $(0,\mathbf p)$，則
+
+$$\mathbf p'=q\otimes(0,\mathbf p)\otimes q^{*}=R(q)\,\mathbf p .$$
+
+四元數→矩陣的閉式（`quat_to_matrix`）：
+
+$$R(q)=\begin{bmatrix}1-2(y^2+z^2)&2(xy-wz)&2(xz+wy)\\ 2(xy+wz)&1-2(x^2+z^2)&2(yz-wx)\\ 2(xz-wy)&2(yz+wx)&1-2(x^2+y^2)\end{bmatrix}.$$
+
+### 13.3 雙重覆蓋 (double cover)
+
+因為半角，$q$ 與 $-q$ 給出**同一個** $R$——映射 $S^3\to SO(3)$ 是 **2 對 1**，即
+$SO(3)\cong S^3/\{\pm1\}$。實務意涵：(1) 取「最短弧」內插時要挑正確的號（SLERP 於 $q_0\!\cdot\!q_1<0$ 翻轉 $q_1$）；
+(2) 反過來，四元數空間**沒有歐拉角那種座標奇異**——這正是它適合作姿態狀態的原因。
+
+### 13.4 組合是同態
+
+$$\boxed{\;R(q_1\otimes q_2)=R(q_1)\,R(q_2)\;}$$
+
+四元數乘法對應旋轉合成，且只需 4 個數、一次乘法，比 $3\times3$ 矩陣連乘便宜、且**不會累積
+正交性誤差**（每步只要除以 $\|q\|$）。`tests/` 對隨機樣本逐點檢驗此同態、雙重覆蓋與
+`quat_rotate` 對矩陣作用的一致性，並**與 SciPy `Rotation`（獨立實作）交叉驗證**（最大差 $\sim10^{-16}$）。
+
+---
+
+## 14. 三種語言的等價與互轉（數值驗證）
+
+矩陣、四元數、旋轉向量描述**同一件事**，可無損互換：
+
+$$\theta\hat n\ \xrightarrow{\ \exp\ }\ R,\qquad R\ \xrightarrow{\ \log\ }\ \theta\hat n,\qquad q\ \xrightarrow{\ R(q)\ }\ R,\qquad R\ \xrightarrow{\text{Shepperd}}\ q .$$
+
+`matrix_to_quat` 用 **Shepperd** 法（先解出四元數中最大的分量再回推其餘），避免
+$\operatorname{tr}R\approx-1$ 時的相消誤差。**驗證優先**（呼應第一部分的能量守恆精神）：這些
+互轉必須 round-trip 還原且彼此一致。notebook §3 對 2000 組隨機旋轉量測，最大誤差：
+
+| 檢驗 | 最大誤差 |
+|---|---|
+| $R\to\log\to\exp$ 還原 | $\sim10^{-10}$ |
+| $R\to q\to R$ 還原 | $\sim10^{-15}$ |
+| $q\to R\to q$ 還原 | $\sim10^{-16}$ |
+| `quat_exp` 與 `exp_so3`（經 $R$）一致 | $\sim10^{-10}$ |
+
+這是**與任何科學結論無關**的正確性指標——3D 旋轉版的「能量守恆 < 1%」。
+
+---
+
+## 15. SLERP：球面測地線與等角速度插值
+
+在兩姿態 $q_0,q_1$ 間**平滑內插**（動作捕捉補幀、關鍵影格、姿態濾波）時，對四元數直接線性內插
+(LERP) 再正規化會使**角速度忽快忽慢**。正確做法是沿 $S^3$ 的**大圓測地線**走——**SLERP**：
+
+$$\boxed{\;\mathrm{slerp}(q_0,q_1;t)=\frac{\sin\!\big((1-t)\Omega\big)}{\sin\Omega}\,q_0+\frac{\sin(t\Omega)}{\sin\Omega}\,q_1\;},\qquad\cos\Omega=q_0\!\cdot\!q_1 .$$
+
+關鍵性質是**等角速度**：投影到 $SO(3)$ 後，姿態以**固定角速率**從 $q_0$ 轉到 $q_1$。
+notebook 量得 SLERP 的瞬時角速率標準差 $\sim10^{-12}$（常數），LERP 則在中段明顯鼓起
+（標準差 $\sim20°$）。$q$ 與 $-q$ 同一旋轉，故實作在 $q_0\!\cdot\!q_1<0$ 時翻轉 $q_1$ 取短弧
+（`slerp`）。
+
+![SLERP vs 正規化 LERP：左圖 SLERP 的轉角隨 $t$ 線性成長；右圖 SLERP 的瞬時角速率為常數，LERP 在中段鼓起。](figures/07_slerp_vs_lerp.png)
+
+---
+
+## 16. 姿態運動學：$\dot q=\tfrac12 q\otimes\omega$
+
+角速度如何改變姿態？四元數運動學是一條**線性 ODE**：
+
+$$\boxed{\;\dot q=\tfrac12\,q\otimes(0,\boldsymbol\omega_b)\ \ (\text{體座標}),\qquad \dot q=\tfrac12\,(0,\boldsymbol\omega_s)\otimes q\ \ (\text{空間座標})\;}$$
+
+分別對應矩陣形式 $\dot R=R[\boldsymbol\omega_b]_\times$ 與 $\dot R=[\boldsymbol\omega_s]_\times R$
+（`quat_derivative`），兩者以 $\boldsymbol\omega_s=R\,\boldsymbol\omega_b$ 相聯。若體座標角速度
+$\boldsymbol\omega_b$ **固定**，解為 $R(t)=R_0\exp(t[\boldsymbol\omega_b]_\times)$——姿態沿 $SO(3)$ 的
+**測地線**等速前進，物體上一點在單位球畫出一個**圓**。
+
+![指數映射的測地線：固定體座標角速度時，旋轉座標系繞固定軸等速轉動，體 x 軸尖端在單位球上畫出一圈。](figures/09_exp_map_geodesic.png)
+
+### 單位範數約束（積分器的姿態版教訓）
+
+實務上（IMU 陀螺儀、預測模擬）$\boldsymbol\omega_b(t)$ 隨時間變化，需**積分**出 $q(t)$。這裡有一個
+第一部分「積分器結構比階數更根本」的姿態版本：$q$ **必須待在 $S^3$ 上**，但一般 ODE 步進會把它
+推離球面。固定步長 forward-Euler 若**不重正規化**，$\|q\|$ 會**系統性漂離 1**（notebook 中 12 秒漂到
+約 1.05）；每步除以 $\|q\|$（或加 Baumgarte 拉回項 $+k(1-\|q\|^2)q$，見 `quat_kinematics_rhs`）
+即可把它釘回球面。反過來，由積出的 $q(t)$ 以
+$\boldsymbol\omega_b=\log\!\big(q_i^{-1}\otimes q_{i+1}\big)/\Delta t$ **反推**角速度，可還原輸入
+（誤差 $O(\Delta t)$）——驗證了運動學公式，也是 Stage 3 由動作捕捉姿態序列回推關節角速度的原型。
+
+![四元數積分：左圖不重正規化時 $\|q\|$ 系統性漂離 1、重正規化後守住約束；右圖由 $q(t)$ 反推的角速度與輸入吻合。](figures/10_quaternion_integration.png)
+
+---
+
+## 17. 萬向鎖：歐拉角為何是壞的姿態座標
+
+ISB／OpenSim 用**歐拉角序列**定義關節角（例如肩關節 **YXY**：抬臂平面、抬臂角、軸向轉），
+把姿態拆成 $R=R_{a_1}(\alpha)R_{a_2}(\beta)R_{a_3}(\gamma)$。問題出在**歐拉角速率 → 角速度**的
+映射 $\boldsymbol\omega_s=E(\alpha,\beta,\gamma)\,[\dot\alpha,\dot\beta,\dot\gamma]^\top$：
+
+$$\boldsymbol\omega_s=\dot\alpha\,a_1+\dot\beta\,(R_{a_1}a_2)+\dot\gamma\,(R_{a_1}R_{a_2}a_3),$$
+
+$E$ 的三個行是三次旋轉軸「當下在世界座標中的方向」。當**首軸與末軸對齊**時它們共面、
+$E$ **奇異**（$\det E\to0$），一個自由度瞬間消失——這就是**萬向鎖 (gimbal lock)**。
+對 ZYX 卡登角，$|\det E|=\cos\beta$，在中間角 $\beta=\pm90°$ 歸零。
+
+![ZYX 歐拉角的萬向鎖：速率映射的病態度 $1/|\det E|=1/\cos\beta$ 在 $\beta\to\pm90°$ 發散。](figures/08_gimbal_lock.png)
+
+> **生物力學意涵**：肩關節 YXY 序列的奇異點在**抬臂角 = 0**（手臂自然下垂）——正是靜態站姿。
+> ISB（Wu et al. 2005）之所以特別提醒肩關節序列要小心，就是這個原因。**守則**：歐拉角僅作
+> 「報告用座標」（人類好讀）；**分析、內插、積分一律回到四元數／$SO(3)$**，避開座標奇異。
+
+---
+
+## 18. 生物力學連結與前瞻
+
+- **球窩關節**：肩（盂肱）、髖是 3 自由度旋轉關節，姿態以四元數／$SO(3)$ 表示最穩健。
+- **IMU 慣性感測**：陀螺儀輸出 $\boldsymbol\omega_b(t)$；姿態估計（互補濾波、Madgwick、Kalman）
+  核心即 §16 的 $\dot q=\tfrac12 q\otimes\omega$ 加單位範數約束。
+- **動作捕捉／姿態平滑**：關鍵影格間用 SLERP 維持等角速度；旋轉平均、濾波都在 $S^3$ 上做。
+- **$\to$ Stage 2（$SE(3)$ 與空間代數）**：旋轉 $SO(3)$ 加平移得剛體位姿群 $SE(3)$，角速度＋線速度
+  合成 6 維**旋量 (twist)** $\xi\in se(3)$；本章的 hat／exp／log 直接推廣，是 RNEA／CRBA／ABA 的
+  幾何語言（Featherstone 2008；Lynch & Park 2017）。
+- **$\to$ Stage 3（OpenSim 運動學）**：每個 body 座標系經一旋轉接父座標系，`BallJoint` 內部即以
+  四元數參數化，scale/IK 管線把標記點姿態轉成關節角——正是本章的互轉。
+
+> **一句話總結**：第一部分給了「怎麼動」（$M\ddot q+C\dot q+g=\tau$），第二部分給了「怎麼轉」
+> （$SO(3)$、四元數、$\dot q=\tfrac12 q\otimes\omega$）。兩者相加，就有描述 3D 肌肉骨骼系統完整運動
+> 所需的幾何與動力學語言。
+
+---
+
+## 19. 名詞對照 (Glossary · Part 2)
+
+| 中文 | English | 符號 |
+|---|---|---|
+| 特殊正交群 / 旋轉群 | special orthogonal group | $SO(3)$ |
+| 李代數 / 反對稱生成元 | Lie algebra | $so(3)$ |
+| hat / vee 映射 | hat / vee map | $[\cdot]_\times$ |
+| 指數映射（Rodrigues） | exponential map | $\exp$ |
+| 對數映射 | logarithm map | $\log$ |
+| 旋轉向量 / 軸-角 | rotation vector / axis-angle | $\theta\hat n$ |
+| 四元數 | quaternion | $q=(w,\mathbf v)$ |
+| Hamilton 積 | Hamilton product | $q_1\otimes q_2$ |
+| 單位四元數 / 3-球面 | unit quaternion / 3-sphere | $S^3$ |
+| 雙重覆蓋 | double cover | $q\sim-q$ |
+| 球面線性插值 | spherical linear interpolation | SLERP |
+| 姿態運動學 | orientation kinematics | $\dot q=\tfrac12 q\otimes\omega$ |
+| 角速度（體 / 空間） | angular velocity (body / space) | $\boldsymbol\omega_b,\ \boldsymbol\omega_s$ |
+| 萬向鎖 | gimbal lock | — |
+| 剛體位姿群 / 旋量 | rigid-body pose group / twist | $SE(3),\ \xi$ |
+
+---
+
+## 20. 參考文獻 (Part 2)
+
+見 [`refs.bib`](refs.bib)。核心：
+
+- **Shoemake (1985)** 動畫用四元數曲線與 SLERP，*SIGGRAPH* — §15 SLERP 的原始出處。
+- **Sola (2017)** *Quaternion kinematics for the error-state Kalman filter*（arXiv:1711.02508）
+  — 四元數慣例、$\dot q=\tfrac12 q\otimes\omega$、IMU 姿態估計的權威整理（§13、§16）。
+- **Grassia (1998)** 指數映射作為旋轉參數化實務, *J. Graphics Tools* — §12 exp/log 的數值細節。
+- **Diebel (2006)** 姿態表示、歐拉角與四元數的完整轉換公式與慣例對照 — §14、§17。
+- **Lynch & Park (2017)** *Modern Robotics*, Ch. 3（$SO(3)$、指數座標、旋量）— §12、§18 → Stage 2。
+- **Featherstone (2008)** *Rigid Body Dynamics Algorithms*, Ch. 2（空間向量代數）— §18 → Stage 2。
+- **Wu et al. (2005)** ISB 上肢關節座標系與歐拉序列建議, *J. Biomech.* — §17 肩關節 YXY 與萬向鎖。
+- **Seth et al. (2018)** OpenSim 4：座標系、關節與 `BallJoint`, *PLoS Comput. Biol.* — §18 → Stage 3。
+
+**延伸閱讀**：Hanson (2006) *Visualizing Quaternions*（幾何直觀）；Stuelpnagel (1964)
+旋轉群的參數化與拓撲（為何不存在無奇異的三參數全域座標——四元數之所以要 4 個數的根本原因）。

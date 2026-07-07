@@ -10,6 +10,8 @@ parts:
         title: 理論筆記 · 拉格朗日動力學與雙擺
       - file: 01_math_foundations/notebooks/01_lagrangian_double_pendulum
         title: Notebook · 雙擺符號推導與模擬
+      - file: 01_math_foundations/notebooks/02_quaternions_so3
+        title: Notebook · 四元數與 SO(3)（3D 旋轉）
       - file: 01_math_foundations/exercises/exercise_01_triple_pendulum
         title: 練習 · 三擺里程碑
   - caption: 附錄 (Appendix)

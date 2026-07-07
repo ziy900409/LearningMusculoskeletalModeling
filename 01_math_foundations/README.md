@@ -26,7 +26,7 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 | 部分 | 主題 | 檔案 | 狀態 |
 |---|---|---|---|
 | **第一部分** | 古典力學與拉格朗日動力學（雙擺） | [`notebooks/01_lagrangian_double_pendulum.ipynb`](notebooks/01_lagrangian_double_pendulum.ipynb) | ✅ 完成 |
-| 第二部分 | 四元數與 $SO(3)$（3D 旋轉） | `notebooks/02_quaternions_so3.ipynb` | ⬜ 待做 |
+| **第二部分** | 四元數與 $SO(3)$（3D 旋轉） | [`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb) | ✅ 完成 |
 | 第三部分 | Hamilton 力學與相空間 | `notebooks/03_hamiltonian_phase_space.ipynb` | ⬜ 待做 |
 
 ## 第一部分內容（已完成）
@@ -48,20 +48,45 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 廣義力 ↔ 淨關節力矩（肌肉力 × 力臂）；$M_{12}$ ↔ Zatsiorsky 的 interaction torque。
 接軌 Zatsiorsky (2012) Ch.5–6、Freivalds (2011) Ch.5。
 
+## 第二部分內容（已完成）
+
+- **理論筆記**：[`notes.md`](notes.md) §11–§20 — $SO(3)$／$so(3)$ 與 Rodrigues 指數／對數映射、
+  Hamilton 四元數與**雙重覆蓋**、矩陣↔四元數↔軸-角三語互轉、**SLERP＝測地線＝等角速度**、
+  姿態運動學 $\dot q=\tfrac12 q\otimes\omega$ 與單位範數約束、**萬向鎖**與 ISB 肩關節角。
+- **Notebook**：[`notebooks/02_quaternions_so3.ipynb`](notebooks/02_quaternions_so3.ipynb)
+  — 指數映射建構旋轉、雙重覆蓋與組合同態、三語 round-trip 與 **SciPy 交叉驗證**、SLERP vs LERP、
+  萬向鎖行列式、四元數積分與角速度反推。（已完整執行，含輸出與圖 07–10）
+- **程式庫**：[`src/rotations_utils.py`](src/rotations_utils.py) — 四元數代數、$SO(3)$/$so(3)$
+  hat/vee、exp/log、quat↔matrix↔axis-angle 轉換、SLERP、姿態運動學（純量在前 $[w,x,y,z]$、Hamilton）。
+- **測試**：[`tests/test_rotations_utils.py`](tests/test_rotations_utils.py) — 29 條回歸測試，
+  逐點檢驗正交性、雙重覆蓋、同態、round-trip、SLERP 等角速度、姿態運動學，並與 SciPy 對照。
+- **圖**：[`figures/`](figures/) 07–10 — 由 notebook 產生。
+
+### 生物力學連結（Part 2）
+球窩關節（肩、髖）＝ 3 自由度旋轉；ISB 歐拉角僅為報告用座標（萬向鎖！），分析與內插回到四元數；
+IMU 姿態估計＝ $\dot q=\tfrac12 q\otimes\omega$ 加範數約束。→ Stage 2（$SE(3)$、旋量）、Stage 3（OpenSim `BallJoint`）。
+
 ## 如何執行
 
 ```bash
 # 相依套件：numpy scipy sympy matplotlib jupyter nbconvert
-python src/dynamics_utils.py                 # 執行內建自我測試（雙擺能量守恆）
+python src/dynamics_utils.py                 # 第一部分自我測試（雙擺能量守恆）
+python src/rotations_utils.py                # 第二部分自我測試（旋轉 round-trip、雙重覆蓋、同態）
+python -m pytest                             # 全部回歸測試（第一 + 第二部分）
 
 # 重新執行 notebook（會重建 figures/）
 jupyter nbconvert --to notebook --execute --inplace \
     notebooks/01_lagrangian_double_pendulum.ipynb
+jupyter nbconvert --to notebook --execute --inplace \
+    notebooks/02_quaternions_so3.ipynb
 ```
 
 ## Stage 1 里程碑
-> 用 Lagrange 從零推導擺方程，數值積分 10 秒，**能量守恆誤差 < 1%**。
+> **第一部分**：用 Lagrange 從零推導擺方程，數值積分 10 秒，**能量守恆誤差 < 1%**。
 > 本部分的 DOP853 設定達到 $\sim10^{-7}\%$，已通過。
+>
+> **第二部分**：三語互轉 round-trip 誤差 $<10^{-9}$；四元數積分 12 秒 $\|q\|$ 偏離 1 $<10^{-5}$、
+> 由 $\dot q$ 反推角速度誤差 $<10^{-2}$ rad/s，已通過（並與 SciPy 交叉驗證）。
 
 ## 參考
 見 [`refs.bib`](refs.bib)。
