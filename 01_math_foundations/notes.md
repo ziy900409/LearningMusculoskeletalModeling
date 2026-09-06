@@ -423,7 +423,6 @@ Zhang & Fan (2015) *Computational Biomechanics of the Musculoskeletal System*（
 <br>
 
 ---
----
 
 # 第二部分 · 四元數與 $SO(3)$（3D 旋轉）
 
@@ -689,7 +688,6 @@ $E$ **奇異**（$\det E\to0$），一個自由度瞬間消失——這就是**�
 
 <br>
 
----
 ---
 
 # 第三部分 · Hamilton 力學與相空間 (Hamiltonian Mechanics & Phase Space)

@@ -9,6 +9,8 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
 
 並打好古典力學、旋轉表示與數值積分的地基。
 
+第一次接觸動力學建模時，請先完成 [單關節前導單元](../00_single_joint/README.md)：用一隻手臂練習符號、兩種推導與數值驗證，再進入本站的雙擺與多自由度系統。
+
 ## 學習目標（讀完你能）
 
 - 用**最小作用量原理**從零推導 Euler–Lagrange，並把任意 $n$ 連桿平面鏈整理成 $M(q)\ddot q + C\dot q + g = \tau$。
@@ -41,7 +43,7 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
   Lagrangian 推導與快速數值介面（`planar_chain`、`limb_chain`、`energy_drift`）。
 - **練習**：[`exercises/exercise_01_triple_pendulum.md`](exercises/exercise_01_triple_pendulum.md)
   — Stage 1 里程碑（三擺，能量守恆 < 1%）。
-- **圖**：[`figures/`](figures/) — 由 notebook 產生。
+- **圖**：[`figures/`](figures/README.md) — 由 notebook 產生。
 
 ### 生物力學連結
 雙擺 = 最小的多關節肢段模型。連桿 ↔ 大腿/小腿或上臂/前臂；關節角 ↔ 髖膝或肩肘；
@@ -60,7 +62,7 @@ $$M(q)\,\ddot q + C(q,\dot q)\,\dot q + g(q) = \tau,$$
   hat/vee、exp/log、quat↔matrix↔axis-angle 轉換、SLERP、姿態運動學（純量在前 $[w,x,y,z]$、Hamilton）。
 - **測試**：[`tests/test_rotations_utils.py`](tests/test_rotations_utils.py) — 29 條回歸測試，
   逐點檢驗正交性、雙重覆蓋、同態、round-trip、SLERP 等角速度、姿態運動學，並與 SciPy 對照。
-- **圖**：[`figures/`](figures/) 07–10 — 由 notebook 產生。
+- **圖**：[`figures/`](figures/README.md) 07–10 — 由 notebook 產生。
 
 ### 生物力學連結（Part 2）
 球窩關節（肩、髖）＝ 3 自由度旋轉；ISB 歐拉角僅為報告用座標（萬向鎖！），分析與內插回到四元數；
@@ -82,7 +84,7 @@ IMU 姿態估計＝ $\dot q=\tfrac12 q\otimes\omega$ 加範數約束。→ Stage
   逐點檢驗 Legendre 互逆、$H=T+V$、Hamilton↔Lagrange 等價、$-\partial H/\partial q$ 一致、
   正則對易 $\{q_i,p_j\}=\delta_{ij}$、辛映射保面積（行列式 $=1$）、辛法能量有界 vs forward Euler 世俗漂移、
   leapfrog 二階與時間可逆。
-- **圖**：[`figures/`](figures/) 11–14 — 由 notebook 產生。
+- **圖**：[`figures/`](figures/README.md) 11–14 — 由 notebook 產生。
 
 ### 生物力學連結（Part 3）
 相圖＝協調動力學的畫布（極限環需耗散＋驅動，非純 Hamilton）；釘住基座→能量守恆、飛行期浮動基座→
