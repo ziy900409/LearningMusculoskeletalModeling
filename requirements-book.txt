@@ -1,0 +1,2 @@
+# This repository uses the Jupyter Book 1 / Sphinx YAML configuration format.
+jupyter-book>=1.0,<2

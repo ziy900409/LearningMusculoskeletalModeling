@@ -4,6 +4,12 @@ title: 學習肌肉骨骼建模 · Learning Musculoskeletal Modeling
 author: Hsin Yang
 copyright: "2026"
 only_build_toc_files: true          # only build pages listed in _toc.yml (ignore legacy folders, PLAN.md, ...)
+exclude_patterns:
+  - _build
+  - .venv-book/**
+  - .pytest_cache/**
+  - '**/.pytest_cache/**'
+  - '**/.ipynb_checkpoints/**'
 
 execute:
   execute_notebooks: "off"          # render committed notebook outputs; notebooks need heavy / OpenSim deps

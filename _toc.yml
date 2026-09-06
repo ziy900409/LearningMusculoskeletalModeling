@@ -2,6 +2,12 @@
 format: jb-book
 root: intro
 parts:
+  - caption: 起步 · 單關節推導與動畫
+    chapters:
+      - file: 00_single_joint/README
+      - file: 00_single_joint/notes
+      - file: 00_single_joint/notebooks/00_single_joint
+      - file: 00_single_joint/exercises/exercises
   - caption: Stage 1 · 數學基礎 (Math Foundations)
     chapters:
       - file: 01_math_foundations/README
@@ -16,8 +22,18 @@ parts:
         title: Notebook · Hamilton 力學與相空間
       - file: 01_math_foundations/exercises/exercise_01_triple_pendulum
         title: 練習 · 三擺里程碑
+  - caption: 最佳化主線 · 逆問題與肌肉冗餘
+    chapters:
+      - file: 06_optimization/README
+      - file: 06_optimization/notes
+      - file: 06_optimization/notebooks/01_redundancy
+      - file: 06_optimization/exercises/exercises
   - caption: 附錄 (Appendix)
     chapters:
+      - file: CURRICULUM
+      - file: exec_plan/optimization_curriculum
+      - file: ANIMATION_GUIDE
+      - file: 01_math_foundations/figures/README
       - file: GLOSSARY
         title: 名詞對照總表
   # Stage 3 尚未併入版控。待 `git add 03_kinematics_opensim` 後取消下列註解即可納入書中
